@@ -80,6 +80,9 @@
 #    monta      rimonta il disco virtuale (serve dopo ogni riavvio del PC)
 #    smonta     smonta il disco virtuale
 #    stato      mostra a che punto sei
+#    registri   raccoglie i registri del desktop (errori di Hyprland, pannelli,
+#               sistema) in registri-vetro.txt, qui nella cartella: serve per capire
+#               un problema. Va fatto con la distro spenta
 #
 #  Il disco virtuale e' un normale file: NON tocca i dischi veri del PC.
 #  Puoi cambiare posizione/dimensione cosi':
@@ -12664,6 +12667,8 @@ if [ "$scelta" = vetro ] && command -v Hyprland >/dev/null && command -v quicksh
     [ -f "$CONF/hypr/personale.conf" ] || printf '# Le tue modifiche a Hyprland (le legge per ultime)\n' > "$CONF/hypr/personale.conf"
     [ -f "$CONF/hypr/vetro-impostazioni.conf" ] || cp /etc/xdg/hypr/vetro-impostazioni.conf "$CONF/hypr/vetro-impostazioni.conf"
     unset WLR_RENDERER WLR_NO_HARDWARE_CURSORS
+    # il registro della volta prima resta (se Hyprland si e' bloccato, il motivo e' li')
+    [ -f "$HOME/.cache/hyprland.log" ] && mv -f "$HOME/.cache/hyprland.log" "$HOME/.cache/hyprland-prima.log"
     inizio=$SECONDS
     dbus-run-session Hyprland -c /etc/xdg/hypr/vetro.conf > "$HOME/.cache/hyprland.log" 2>&1
     esito=$?
@@ -13020,6 +13025,14 @@ misc {
 
 xwayland {
     force_zero_scaling = true
+}
+
+# registro di Hyprland: di serie non ne scrive. Cosi' finisce in ~/.cache/hyprland.log
+# (quello della volta prima in ~/.cache/hyprland-prima.log); li raccoglie
+# "sudo ./lfs.sh registri" dal tuo PC, a distro spenta
+debug {
+    disable_logs = false
+    enable_stdout_logs = true
 }
 
 cursor {
@@ -18423,6 +18436,56 @@ cmd_step1() {
   info "Dopo un riavvio ricordati di rimontare il disco:  sudo $0 monta"
 }
 
+cmd_registri() {
+  serve_root registri
+  titolo "Raccolgo i registri del desktop (per capire un problema)"
+  assicura_montato                      # si ferma da solo se la distro e' accesa
+  local utente casa out f
+  utente=$(cat "$CONF_DIR/utente" 2>/dev/null || true)
+  [ -n "$utente" ] || muori "Non so qual e' il tuo utente nella distro ($CONF_DIR/utente manca)"
+  casa=$(awk -F: -v u="$utente" '$1 == u { print $6 }' "$LFS/etc/passwd")
+  [ -n "$casa" ] && [ -d "$LFS$casa" ] || muori "Non trovo la cartella di $utente nella distro"
+  casa="$LFS$casa"
+  out="$PWD/registri-vetro.txt"
+  sezione() { printf '\n\n===== %s =====\n' "$1"; }
+  coda() { # file righe
+    if [ -s "$1" ]; then echo "--- ${1#"$LFS"} ($(date -r "$1" '+%F %T'))"; tail -n "$2" "$1"
+    else echo "(${1#"$LFS"}: non c'e')"; fi
+  }
+  {
+    echo "Registri del desktop Vetro, raccolti il $(date '+%F %T') (utente: $utente)"
+    sezione "Hyprland: rapporti di errore (gli ultimi due)"
+    f=$(ls -t "$casa"/.cache/hyprland/hyprlandCrashReport*.txt 2>/dev/null | head -n 2 || true)
+    if [ -n "$f" ]; then for f in $f; do coda "$f" 400; done
+    else echo "(nessun rapporto: Hyprland non si e' chiuso per un errore)"; fi
+    sezione "Hyprland: registro dell'ultima volta e di quella prima"
+    coda "$casa/.cache/hyprland.log" 400
+    coda "$casa/.cache/hyprland-prima.log" 400
+    sezione "Pannelli (Quickshell)"
+    coda "$casa/.cache/quickshell-vetro.log" 300
+    sezione "Desktop classico (labwc)"
+    coda "$casa/.labwc.log" 80
+    sezione "Registro di sistema (avvio precedente: avvisi ed errori)"
+    if [ -d "$LFS/var/log/journal" ] && command -v journalctl >/dev/null; then
+      journalctl -D "$LFS/var/log/journal" -b -1 -p warning --no-pager 2>&1 | tail -n 300 || true
+    else
+      echo "(non salvato su disco: con la modalita' fantasma resta solo in memoria)"
+    fi
+    sezione "Configurazione"
+    f="$casa/.config/desktop-scelto"; [ -s "$f" ] || f="$LFS/etc/vetro/desktop-predefinito"
+    echo "desktop scelto: $(cat "$f" 2>/dev/null || true)"
+    ls -l "$LFS/usr/lib/hyprland-plugins" 2>&1 || true
+    coda "$LFS/etc/xdg/hypr/vetro-barre.conf" 40
+    coda "$casa/.config/hypr/personale.conf" 40
+    coda "$casa/.config/hypr/vetro-impostazioni.conf" 60
+    if grep -q 'Stato.barre' "$LFS/etc/xdg/quickshell/vetro/Barra.qml" 2>/dev/null; then
+      echo "pannelli: versione nuova"; else echo "pannelli: versione vecchia"; fi
+  } > "$out" 2>&1
+  [ -n "${SUDO_USER:-}" ] && chown "$SUDO_USER": "$out"
+  ok "Fatto: $out ($(wc -l < "$out") righe)"
+  info "Mandami questo file (trascinalo nella chat). Contiene solo i registri del desktop."
+}
+
 aiuto() { awk 'NR > 2 && /^# =====/ { exit } NR > 2' "$0" | sed 's/^# \{0,1\}//'; }
 
 case "${1:-}" in
@@ -18443,5 +18506,6 @@ case "${1:-}" in
   disco) cmd_disco ;;      sorgenti)  cmd_sorgenti ;;
   utente) cmd_utente ;;    monta)     cmd_monta ;;
   smonta) cmd_smonta ;;    stato)     cmd_stato ;;
+  registri) cmd_registri ;;
   *) aiuto ;;
 esac
