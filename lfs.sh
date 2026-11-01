@@ -777,6 +777,10 @@ segno_di() { # riga-della-lista -> file che dice "fatto"
   echo "$STATO_DIR/fatto/$fn-${arch%.tar.*}"
 }
 
+impronta_di() { # funzione -> impronta del suo testo (cambia se lfs.sh la cambia)
+  declare -f "$1" | md5sum | cut -d' ' -f1
+}
+
 quanti_fatti() { # voci della lista...
   local r c=0
   for r in "$@"; do [ -e "$(segno_di "$r")" ] && c=$((c + 1)); done
@@ -12081,7 +12085,8 @@ echo "[OK] Icone di Impostazioni, Spegnimento e del browser di riserva"
 
 f9_file_manager() {
 # NON IN BLFS: Thunar con barra laterale "Preferiti", percorso a briciole (come il
-# Finder o Esplora risorse) e icone piu' grandi (configurazione, nessun pacchetto nuovo)
+# Finder o Esplora risorse) e icone nitide: 48 pixel (zoom 75%), la misura piu' grande
+# delle immagini di AdwaitaLegacy (configurazione, nessun pacchetto nuovo)
 [ -n "${MIA_UTENTE:-}" ] || { echo "Manca il nome dell'utente"; return 1; }
 local casa; casa=$(getent passwd "$MIA_UTENTE" | cut -d: -f6)
 [ -d "$casa" ] || { echo "Non trovo la cartella di $MIA_UTENTE"; return 1; }
@@ -12092,7 +12097,7 @@ cat > /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/thunar.xml << "EOF"
 <channel name="thunar" version="1.0">
   <property name="default-view" type="string" value="ThunarIconView"/>
   <property name="last-view" type="string" value="ThunarIconView"/>
-  <property name="last-icon-view-zoom-level" type="string" value="THUNAR_ZOOM_LEVEL_150_PERCENT"/>
+  <property name="last-icon-view-zoom-level" type="string" value="THUNAR_ZOOM_LEVEL_75_PERCENT"/>
   <property name="last-side-pane" type="string" value="ThunarShortcutsPane"/>
   <property name="last-side-pane-visible" type="bool" value="true"/>
   <property name="last-show-hidden" type="bool" value="false"/>
@@ -12209,6 +12214,9 @@ FONTI_FASE10=(
   "qtdeclarative-everywhere-src-6.11.2.tar.xz|https://download.qt.io/archive/qt/6.11/6.11.2/submodules/qtdeclarative-everywhere-src-6.11.2.tar.xz|sha256:215b7b70517e380123eabc6b92243f3c47b6f016a91d126057dbe53551c6b430"
   "CLI11-2.7.2.tar.gz|https://github.com/CLIUtils/CLI11/archive/refs/tags/v2.7.2.tar.gz|sha256:46eef3101da70852ec7af026e09d485ccee81813331c8c6052d39344443b83da"
   "quickshell-0.3.2.tar.gz|https://git.outfoxxed.me/quickshell/quickshell/archive/v0.3.2.tar.gz|sha256:f14115a73c9fff6aa6399f924b632e88c3ce2cead2657f814a7825341f35baad"
+  # plugin delle barre del titolo: la versione che gli autori indicano per Hyprland 0.54.3
+  # (file hyprpm.toml di hyprland-plugins)
+  "hyprland-plugins-6acc073.tar.gz|https://github.com/hyprwm/hyprland-plugins/archive/6acc0738f298f5efe40a99db2c12449112d65633.tar.gz|-"
 )
 # Le icone dei pannelli (Material Symbols, licenza Apache 2.0): il file cambia ogni
 # tanto, quindi non c'e' un controllo fisso. Se non si scarica si va avanti lo stesso
@@ -12922,9 +12930,8 @@ monitor = , preferred, auto, 1
 env = XCURSOR_SIZE, 24
 env = XCURSOR_THEME, AdwaitaLegacy
 env = HYPRCURSOR_SIZE, 24
-# i programmi GTK3 (Thunar, Mousepad...) si disegnano da soli la barra del titolo
-# con i tre pulsanti colorati del tema Elegante
-env = GTK_CSD, 1
+# (niente GTK_CSD=1: su Wayland GTK3 lo ignora, perche' Hyprland chiede le barre "lato
+# server". Le barre del titolo le disegna il plugin hyprbars: vedi vetro-barre.conf)
 env = QT_QPA_PLATFORM, wayland
 env = MOZ_ENABLE_WAYLAND, 1
 env = XDG_CURRENT_DESKTOP, Hyprland
@@ -13003,6 +13010,12 @@ misc {
     key_press_enables_dpms = true
     # se i pannelli ripartono mentre lo schermo e' bloccato, possono riprenderlo
     allow_session_lock_restore = true
+    # niente avviso "manca hyprland-guiutils": servirebbe solo per alcune finestre di
+    # domanda di Hyprland (permessi, "il programma non risponde"), qui non usate
+    disable_hyprland_guiutils_check = true
+    # niente avviso "avviato senza start-hyprland": Hyprland lo avvia avvia-desktop, che
+    # se non parte passa al desktop classico (start-hyprland direbbe sempre "tutto ok")
+    disable_watchdog_warning = true
 }
 
 xwayland {
@@ -13104,10 +13117,17 @@ bindl = , XF86AudioPrev, global, quickshell:musica-indietro
 # --- avvio ------------------------------------------------------------------------
 exec-once = /usr/local/bin/avvio-vetro
 
+# le barre del titolo delle finestre (plugin hyprbars, se si e' compilato)
+source = /etc/xdg/hypr/vetro-barre.conf
+
 # le scelte fatte da Impostazioni, poi le tue modifiche
 source = ~/.config/hypr/vetro-impostazioni.conf
 source = ~/.config/hypr/personale.conf
 EOF
+# il file delle barre del titolo lo riempie il passo "barre del titolo": finche' non
+# c'e' (o se il plugin non si compila) resta vuoto, e Hyprland va lo stesso
+[ -f /etc/xdg/hypr/vetro-barre.conf ] \
+  || echo "# Barre del titolo: vuoto finche' il plugin hyprbars non c'e'" > /etc/xdg/hypr/vetro-barre.conf
 cat > /etc/xdg/hypr/vetro-impostazioni.conf << "EOF"
 # Creato da Impostazioni (desktop Vetro): non modificarlo a mano,
 # le tue aggiunte vanno in ~/.config/hypr/personale.conf
@@ -13579,6 +13599,11 @@ PanelWindow {
         window: barra
         enabled: Stato.restaSveglio
     }
+
+    // con un pannello aperto Hyprland manda i clic solo alle finestre della sua lista:
+    // la barra ci entra, cosi' i suoi tasti rispondono al primo clic
+    Component.onCompleted: Stato.barre = Stato.barre.concat([barra])
+    Component.onDestruction: Stato.barre = Stato.barre.filter(b => b !== barra)
 
     // ---------------------------------------------------------------- a sinistra
     Rectangle {
@@ -14200,6 +14225,7 @@ ColumnLayout {
             delegate: Text {
                 required property var modelData
                 Layout.fillWidth: true
+                Layout.preferredWidth: 1          // colonne tutte larghe uguali
                 horizontalAlignment: Text.AlignHCenter
                 text: modelData
                 font.family: Tema.carattere
@@ -14214,6 +14240,7 @@ ColumnLayout {
                 required property var modelData
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                Layout.preferredWidth: 1
                 Rectangle {
                     anchors.centerIn: parent
                     width: Math.min(parent.width, parent.height, 30)
@@ -14287,7 +14314,7 @@ PanelWindow {
     WlrLayershell.keyboardFocus: Stato.cruscotto ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     HyprlandFocusGrab {
-        windows: [ cruscotto ]
+        windows: [ cruscotto ].concat(Stato.barre)
         active: Stato.cruscotto
         onCleared: Stato.cruscotto = false
     }
@@ -14479,8 +14506,10 @@ PanelWindow {
         }
 
         // saluto
+        // (larghezze fisse a destra: lo spazio che avanza va al calendario. Una carta
+        // con fillWidth ma senza larghezza di partenza riceve 0: il calendario spariva)
         Carta {
-            Layout.fillWidth: true
+            Layout.preferredWidth: 260
             Layout.preferredHeight: 120
             ColumnLayout {
                 anchors.fill: parent
@@ -14540,13 +14569,14 @@ PanelWindow {
         // calendario
         Carta {
             Layout.fillWidth: true
+            Layout.preferredWidth: 300
             Layout.fillHeight: true
             Calendario { anchors.fill: parent; anchors.margins: 12; oggi: ora.date }
         }
 
         // processore, memoria, disco
         Carta {
-            Layout.preferredWidth: 236
+            Layout.preferredWidth: 260
             Layout.fillHeight: true
             ColumnLayout {
                 anchors.fill: parent
@@ -14957,6 +14987,9 @@ PanelWindow {
 
     // l'elenco: prima le preferite, poi le altre app aperte
     readonly property var voci: {
+        // Quickshell legge le app in sottofondo: finche' non ha finito, byId() non trova
+        // niente. Leggere qui l'elenco fa ricalcolare il dock quando arriva.
+        const pronte = Applicazioni.tutte;
         const l = [];
         const fisse = fissate();
         for (let i = 0; i < fisse.length; i++)
@@ -16703,7 +16736,7 @@ PanelWindow {
     WlrLayershell.keyboardFocus: Stato.pannello ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     HyprlandFocusGrab {
-        windows: [ pannello ]
+        windows: [ pannello ].concat(Stato.barre)
         active: Stato.pannello
         onCleared: Stato.pannello = false
     }
@@ -17685,6 +17718,8 @@ Singleton {
     property string pagina: "generale"
     property bool bloccato: false        // blocco schermo
     property bool restaSveglio: false    // lo schermo non si spegne e non si blocca
+    // le barre in alto (una per schermo): restano cliccabili quando un pannello e' aperto
+    property var barre: []
 
     function chiudiTutto() {
         pannello = false;
@@ -18117,6 +18152,65 @@ echo vetro > /etc/vetro/desktop-predefinito
 echo "[OK] All'accesso parte il desktop Vetro (o il classico, se manca il 3D)"
 }
 
+f10_thunar_icone() {
+# NON IN BLFS: icone nitide in Thunar. Il tema AdwaitaLegacy ha immagini fino a 48
+# pixel: con lo zoom al 150% (96 pixel) GTK le ingrandiva al doppio e si vedevano
+# sgranate. Al 75% sono 48 pixel, la misura vera. Si cambia solo chi ha ancora il
+# 150% messo da lfs.sh (se hai scelto tu un altro zoom, resta il tuo).
+local casa="" f
+[ -n "${MIA_UTENTE:-}" ] && casa=$(getent passwd "$MIA_UTENTE" | cut -d: -f6)
+for f in /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/thunar.xml \
+         ${casa:+"$casa/.config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml"} \
+         /usr/local/share/fantasma/casa/.config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml; do
+  [ -f "$f" ] || continue
+  sed -i 's/THUNAR_ZOOM_LEVEL_150_PERCENT/THUNAR_ZOOM_LEVEL_75_PERCENT/' "$f"
+done
+echo "[OK] Icone di Thunar a 48 pixel (nitide)"
+}
+
+f10_barre() {
+# NON IN BLFS: le barre del titolo delle finestre, con il plugin "hyprbars" degli
+# autori di Hyprland. Hyprland da solo non disegna barre, e non sposta una finestra
+# quando ne trascini la barra disegnata dal programma: cosi' Thunar e gli altri non
+# si potevano spostare col mouse. Con il plugin ogni finestra ha una barra da
+# trascinare e i tre pulsanti colorati a sinistra (come su macOS).
+# Si compila come fa hyprpm (make -C hyprbars all), contro Hyprland gia' installato.
+export PKG_CONFIG_PATH="/opt/rsvg-finto/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+make -C hyprbars all
+nm -D hyprbars/hyprbars.so | grep -q pluginInit || { echo "Il plugin hyprbars non e' venuto bene"; return 1; }
+install -vDm755 hyprbars/hyprbars.so /usr/lib/hyprland-plugins/hyprbars.so
+cat > /etc/xdg/hypr/vetro-barre.conf << "EOF"
+# Barre del titolo delle finestre (creato da lfs.sh, Fase 10): plugin hyprbars.
+# Trascina la barra per spostare la finestra, doppio clic per ingrandirla.
+# Pulsanti a sinistra come su macOS: rosso chiude, giallo riduce, verde ingrandisce.
+# Per toglierle: in ~/.config/hypr/personale.conf scrivi  plugin:hyprbars:enabled = false
+plugin = /usr/lib/hyprland-plugins/hyprbars.so
+
+plugin {
+    hyprbars {
+        bar_height = 32
+        bar_color = rgba(1c1c20e6)
+        col.text = rgba(f2f2f5ff)
+        bar_text_size = 11
+        bar_text_align = center
+        bar_blur = true
+        bar_part_of_window = true
+        bar_precedence_over_border = true
+        bar_buttons_alignment = left
+        bar_padding = 14
+        bar_button_padding = 8
+        inactive_button_color = rgba(ffffff33)
+        on_double_click = hyprctl dispatch fullscreen 1
+        # colore, misura, simbolo (nessuno), comando: da sinistra a destra
+        hyprbars-button = rgb(ff5f57), 13, , hyprctl dispatch killactive
+        hyprbars-button = rgb(febc2e), 13, , hyprctl dispatch global quickshell:riduci
+        hyprbars-button = rgb(28c840), 13, , hyprctl dispatch fullscreen 1
+    }
+}
+EOF
+echo "[OK] Barre del titolo pronte: trascinale per spostare le finestre"
+}
+
 LISTA_STEP17=(
   "SPIRV-Headers|SPIRV-Headers-vulkan-sdk-1.4.357.0.tar.gz|f10_spirv_headers"
   "SPIRV-Tools|SPIRV-Tools-vulkan-sdk-1.4.357.0.tar.gz|f10_spirv_tools"
@@ -18149,6 +18243,8 @@ LISTA_STEP17=(
   "configurazione di Hyprland|-|f10_config_hyprland"
   "pannelli (Quickshell) e sfondi|-|f10_shell"
   "avvio del desktop Vetro|-|f10_sessione"
+  "icone nitide in Thunar|-|f10_thunar_icone"
+  "barre del titolo (hyprbars)|hyprland-plugins-6acc073.tar.gz|f10_barre"
 )
 
 cmd_fase10() {
@@ -18161,10 +18257,22 @@ cmd_fase10() {
   # le fasi precedenti con parti nuove (aggiunte dopo) o non finite si completano prima
   completa_fasi_precedenti 16
   titolo "Fase 10 - Desktop Vetro: Hyprland e Quickshell (animazioni, effetto vetro)"
+  local r nome arch fn
   if [ "${2:-}" = rifai ]; then
-    local r; for r in "${LISTA_STEP17[@]}"; do rm -f "$(segno_di "$r")"; done
+    for r in "${LISTA_STEP17[@]}"; do rm -f "$(segno_di "$r")"; done
     info "Rifaccio la Fase 10 da capo (opzione 'rifai')"
   fi
+  # i passi senza compilazione (pannelli, configurazione, aiutanti) si rifanno da soli
+  # se questa versione di lfs.sh li ha cambiati: basta rilanciare "fase10" dopo un
+  # aggiornamento dello script. Qt, Hyprland e gli altri pacchetti non si ricompilano.
+  for r in "${LISTA_STEP17[@]}"; do
+    IFS='|' read -r nome arch fn <<<"$r"
+    [ "$arch" = "-" ] || continue
+    if [ -e "$(segno_di "$r")" ] && [ "$(cat "$STATO_DIR/impronte/$fn" 2>/dev/null)" != "$(impronta_di "$fn")" ]; then
+      rm -f "$(segno_di "$r")"
+      info "Aggiorno: $nome"
+    fi
+  done
   titolo "Scarico i sorgenti della Fase 10 (circa 120 MB)"
   scarica_fonti "${FONTI_FASE10[@]}"
   if [ ! -s "$LFS/sources/$FONT_ICONE_FILE" ]; then
@@ -18177,12 +18285,19 @@ cmd_fase10() {
   local esito=0
   lancia_in_chroot 17 MIA_UTENTE="$UTENTE" MIA_COMANDO=fase10 MIA_ETICHETTA="Fase 10" || esito=$?
   [ "$esito" -eq 0 ] || exit "$esito"
+  # le impronte dei passi appena fatti (per accorgersi dei cambiamenti la prossima volta)
+  mkdir -p "$STATO_DIR/impronte"
+  for r in "${LISTA_STEP17[@]}"; do
+    IFS='|' read -r nome arch fn <<<"$r"
+    if [ "$arch" = "-" ]; then impronta_di "$fn" > "$STATO_DIR/impronte/$fn"; fi
+  done
   titolo "FASE 10 COMPLETATA"
   info "Accendi la distro (sudo $0 avvia): ora parte con l'accelerazione 3D e il desktop Vetro."
   info "   Tasto Windows: cerca le app      Windows+A: centro di controllo"
   info "   Windows+D (o clic sull'ora): cruscotto con meteo, calendario e prestazioni"
   info "   Windows+I: Impostazioni          Windows+L: blocco schermo"
   info "   Alt+Tab: cambia finestra         Windows+freccia su/giu': ingrandisci/riduci"
+  info "   Finestre: trascina la barra del titolo (o Windows + trascina) per spostarle"
   info "   Se il 3D non c'e', parte il desktop classico. Per sceglierlo tu: app 'Cambia desktop'"
   info "   Se i pannelli non partono, il motivo e' in ~/.cache/quickshell-vetro.log"
 }
