@@ -1210,6 +1210,13 @@ cat > /etc/ld.so.conf << "EOF"
 /opt/lib
 
 EOF
+# come nel libro: anche i file in /etc/ld.so.conf.d (li usa Qt, Fase 10)
+cat >> /etc/ld.so.conf << "EOF"
+# Add an include directory
+include /etc/ld.so.conf.d/*.conf
+
+EOF
+mkdir -pv /etc/ld.so.conf.d
 }
 
 t8_glibc() {
@@ -12465,6 +12472,10 @@ ninja -C build -j "$(lavori_pesanti)"
 ninja -C build install
 find /opt/qt6/ -name \*.prl -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d' {} \;
 # come nel libro: dove stanno le librerie e i programmi di Qt
+# (i sistemi fatti con le versioni vecchie di lfs.sh non hanno ld.so.conf.d: lo aggiungo)
+mkdir -p /etc/ld.so.conf.d /etc/profile.d
+grep -q '^include /etc/ld.so.conf.d/\*\.conf' /etc/ld.so.conf 2>/dev/null \
+  || printf '# Add an include directory\ninclude /etc/ld.so.conf.d/*.conf\n' >> /etc/ld.so.conf
 cat > /etc/ld.so.conf.d/qt6.conf << "EOF"
 /opt/qt6/lib
 EOF
