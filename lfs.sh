@@ -9841,7 +9841,14 @@ spegni() {
            --text "<b>Spegnere la modalità fantasma?</b>
 
 I siti torneranno a vedere il tuo indirizzo IP." || return 0
-  sudo -n "$AIUTO" spegni >/dev/null 2>&1
+  local msg
+  if ! msg=$(sudo -n "$AIUTO" spegni 2>&1); then
+    finestra --image dialog-error --button OK:0 \
+             --text "<b>Non riesco a spegnere la modalità fantasma.</b>
+
+<small>$(printf '%s' "$msg" | tail -n 3 | sicuro)</small>"
+    return 1
+  fi
   sfondo
   finestra --image dialog-information --button OK:0 \
            --text "<b>Modalità fantasma spenta.</b>  Chiudi e riapri i programmi già aperti."
@@ -12692,6 +12699,14 @@ export PATH="/usr/local/bin:$PATH"
 [ -x /usr/local/bin/avvia-audio ] && /usr/local/bin/avvia-audio >/dev/null 2>&1 &
 [ -x /usr/local/bin/guardiano-avvisi ] && /usr/local/bin/guardiano-avvisi >/dev/null 2>&1 &
 [ -x /usr/local/bin/benvenuto ] && /usr/local/bin/benvenuto >/dev/null 2>&1 &
+# per capire i problemi: cosa vede Hyprland poco dopo l'avvio (mouse e tastiere,
+# pannelli, finestre, plugin). Lo raccoglie "sudo ./lfs.sh registri" dal tuo PC.
+( sleep 25
+  { echo "== $(date '+%F %T')"
+    for c in version devices layers clients workspaces cursorpos "plugin list"; do
+      echo; echo "== hyprctl $c"; hyprctl $c
+    done
+  } > "$HOME/.cache/vetro-diagnosi.txt" 2>&1 ) &
 exec /usr/local/bin/avvia-pannelli
 EOF
 cat > /usr/local/bin/avvia-pannelli << "EOF"
@@ -18488,6 +18503,36 @@ done
 echo "[OK] Icone di Thunar a 48 pixel (nitide)"
 }
 
+f10_ritocchi() {
+# NON IN BLFS: piccole correzioni ai programmi delle fasi prima, per chi le ha gia' fatte.
+# - modalita' fantasma: se non riesce a spegnersi lo dice, con il motivo (prima diceva
+#   "spenta" anche quando lo spegnimento non era riuscito)
+if [ -f /usr/local/bin/fantasma ]; then
+python3 -I - /usr/local/bin/fantasma << "EOF"
+import sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+vecchio = '  sudo -n "$AIUTO" spegni >/dev/null 2>&1\n'
+nuovo = r"""  local msg
+  if ! msg=$(sudo -n "$AIUTO" spegni 2>&1); then
+    finestra --image dialog-error --button OK:0 \
+             --text "<b>Non riesco a spegnere la modalità fantasma.</b>
+
+<small>$(printf '%s' "$msg" | tail -n 3 | sicuro)</small>"
+    return 1
+  fi
+"""
+if vecchio in s:
+    open(p, "w", encoding="utf-8").write(s.replace(vecchio, nuovo, 1))
+    print("modalita' fantasma: corretto lo spegnimento")
+EOF
+grep -q 'Non riesco a spegnere la modalit' /usr/local/bin/fantasma \
+  || { echo "Non riesco a correggere /usr/local/bin/fantasma"; return 1; }
+bash -n /usr/local/bin/fantasma
+fi
+echo "[OK] Correzioni ai programmi delle fasi prima"
+}
+
 f10_barre() {
 # NON IN BLFS: le barre del titolo delle finestre, con il plugin "hyprbars" degli
 # autori di Hyprland. Hyprland da solo non disegna barre, e non sposta una finestra
@@ -18565,6 +18610,7 @@ LISTA_STEP17=(
   "pannelli (Quickshell) e sfondi|-|f10_shell"
   "avvio del desktop Vetro|-|f10_sessione"
   "icone nitide in Thunar|-|f10_thunar_icone"
+  "correzioni ai programmi delle fasi prima|-|f10_ritocchi"
   "barre del titolo (hyprbars)|hyprland-plugins-6acc073.tar.gz|f10_barre"
 )
 
@@ -18769,6 +18815,8 @@ cmd_registri() {
     sezione "Hyprland: registro dell'ultima volta e di quella prima"
     coda "$casa/.cache/hyprland.log" 400
     coda "$casa/.cache/hyprland-prima.log" 400
+    sezione "Cosa vede Hyprland dopo l'avvio (mouse, pannelli, finestre, plugin)"
+    coda "$casa/.cache/vetro-diagnosi.txt" 400
     sezione "Pannelli (Quickshell)"
     coda "$casa/.cache/quickshell-vetro.log" 300
     sezione "Desktop classico (labwc)"
