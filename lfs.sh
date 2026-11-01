@@ -12495,6 +12495,10 @@ echo "[OK] Qt 6 (base) installato in /opt/qt6"
 f10_qt_modulo() {
 # BLFS, pagina "Qt-6": gli altri moduli (shadertools, svg, declarative) si preparano
 # con lo strumento di Qt appena installato
+# Qt non segna nei programmi dove stanno le sue librerie (rpath spento): il sistema le
+# trova solo se "ldconfig" le ha messe in elenco. Prima: le librerie dei moduli gia'
+# fatti (declarative usa qsb, che vuole libQt6ShaderTools). Dopo: quelle di questo modulo.
+ldconfig
 mkdir build
 cd    build
 /opt/qt6/bin/qt-configure-module .. -- \
@@ -12504,6 +12508,7 @@ cd    build
       -D QT_UNITY_BUILD=ON
 ninja -j "$(lavori_pesanti)"
 ninja install
+ldconfig
 }
 
 f10_cli11() {
