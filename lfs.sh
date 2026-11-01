@@ -12919,6 +12919,310 @@ update-desktop-database /usr/share/applications 2>/dev/null || true
 echo "[OK] Aiutanti del desktop Vetro pronti"
 }
 
+f10_cursori() {
+# NON IN BLFS: i puntatori del mouse (tema "Vetro"): freccia bianca col bordo nero e
+# ombra leggera, come su Windows, piu' manina, cursore del testo, rotellina di attesa
+# e frecce per ridimensionare. Prima non c'era nessun tema di puntatori e Hyprland
+# usava il suo di riserva (una goccia azzurra). Disegnati con Python, come gli sfondi.
+install -vdm755 /usr/local/lib/vetro
+cat > /usr/local/lib/vetro/disegna-cursori << "EOF"
+#!/usr/bin/python3 -I
+# Disegna i puntatori del mouse del desktop "Vetro" (creato da lfs.sh, Fase 10), solo
+# Python: freccia bianca col bordo nero e ombra leggera, come su Windows. Scrive un
+# tema Xcursor (lo leggono Hyprland, GTK, Qt e labwc):
+#   disegna-cursori CARTELLA        es. disegna-cursori /usr/share/icons/Vetro
+# Disegni originali: forme semplici (poligoni, linee, archi) su una griglia 24x24,
+# rese morbide sui bordi con 4x4 campioni per pixel.
+import math, os, struct, sys
+
+TAGLIE = (24, 32, 48)
+CAMPIONI = 4
+BIANCO = (1.0, 1.0, 1.0)
+NERO = (0.0, 0.0, 0.0)
+BLU = (0.0, 0.47, 0.84)
+GRIGIO = (0.55, 0.57, 0.62)
+
+
+# --------------------------------------------------------------------- geometria
+def dentro(x, y, poli):
+    c = False
+    n = len(poli)
+    for i in range(n):
+        x1, y1 = poli[i]
+        x2, y2 = poli[(i + 1) % n]
+        if (y1 > y) != (y2 > y) and x < x1 + (y - y1) * (x2 - x1) / (y2 - y1):
+            c = not c
+    return c
+
+
+def dist_segmento(x, y, a, b):
+    ax, ay = a
+    bx, by = b
+    dx, dy = bx - ax, by - ay
+    l2 = dx * dx + dy * dy
+    t = 0.0 if l2 == 0 else max(0.0, min(1.0, ((x - ax) * dx + (y - ay) * dy) / l2))
+    px, py = ax + t * dx - x, ay + t * dy - y
+    return math.sqrt(px * px + py * py)
+
+
+def dist_bordo(x, y, poli):
+    n = len(poli)
+    return min(dist_segmento(x, y, poli[i], poli[(i + 1) % n]) for i in range(n))
+
+
+def ruota(poli, gradi, cx=12.0, cy=12.0, scala=1.0):
+    a = math.radians(gradi)
+    c, s = math.cos(a), math.sin(a)
+    return [(cx + ((x - cx) * c - (y - cy) * s) * scala, cy + ((x - cx) * s + (y - cy) * c) * scala)
+            for x, y in poli]
+
+
+def arco(cx, cy, r, da, a, passi=10):
+    return [(cx + r * math.cos(math.radians(da + (a - da) * i / passi)),
+             cy + r * math.sin(math.radians(da + (a - da) * i / passi))) for i in range(passi + 1)]
+
+
+# ------------------------------------------------------------------------ forme
+# Ogni forma e' una lista di pezzi, disegnati in ordine (l'ultimo sta sopra):
+#   ("poli", punti, riempimento, bordo, spessore)
+#   ("linea", a, b, colore, spessore)
+#   ("anello", cx, cy, raggio, spessore, colore, da_gradi, a_gradi)
+FRECCIA = [(0.5, 0.5), (0.5, 17.2), (4.6, 13.5), (7.5, 19.4), (10.0, 18.3),
+           (7.2, 12.6), (12.3, 12.6)]
+
+MANO = ([(7.4, 2.4)] + arco(9.2, 2.4, 1.8, 180, 360, 6)[1:] +
+        [(11.0, 8.2)] + arco(12.3, 8.6, 1.3, 200, 340, 4) +
+        arco(14.9, 9.1, 1.3, 200, 340, 4) +
+        arco(17.3, 9.9, 1.2, 200, 345, 4) +
+        [(18.6, 15.0), (17.9, 18.0), (16.6, 20.0), (16.6, 22.6), (8.8, 22.6), (8.8, 20.9),
+         (6.9, 18.7), (5.0, 16.0), (2.9, 13.4), (2.7, 12.3), (3.4, 11.6), (4.6, 11.7),
+         (6.0, 12.9), (7.4, 14.0)])
+
+DOPPIA = [(1.5, 12.0), (6.5, 7.0), (6.5, 10.4), (17.5, 10.4), (17.5, 7.0), (22.5, 12.0),
+          (17.5, 17.0), (17.5, 13.6), (6.5, 13.6), (6.5, 17.0)]
+
+QUATTRO = [(12.0, 1.0), (16.2, 5.2), (13.4, 5.2), (13.4, 10.6), (18.8, 10.6), (18.8, 7.8),
+           (23.0, 12.0), (18.8, 16.2), (18.8, 13.4), (13.4, 13.4), (13.4, 18.8), (16.2, 18.8),
+           (12.0, 23.0), (7.8, 18.8), (10.6, 18.8), (10.6, 13.4), (5.2, 13.4), (5.2, 16.2),
+           (1.0, 12.0), (5.2, 7.8), (5.2, 10.6), (10.6, 10.6), (10.6, 5.2), (7.8, 5.2)]
+
+
+def freccia():
+    return [("poli", FRECCIA, BIANCO, NERO, 1.1)]
+
+
+def mano():
+    return [("poli", MANO, BIANCO, NERO, 1.1),
+            ("linea", (11.0, 8.6), (11.0, 12.6), NERO, 0.9),
+            ("linea", (13.6, 9.1), (13.6, 12.8), NERO, 0.9),
+            ("linea", (16.2, 9.7), (16.2, 13.2), NERO, 0.9)]
+
+
+def testo():
+    pezzi = []
+    for colore, spessore in ((BIANCO, 3.6), (NERO, 1.4)):
+        pezzi += [("linea", (12.0, 3.0), (12.0, 21.0), colore, spessore),
+                  ("linea", (9.0, 2.6), (11.0, 3.2), colore, spessore),
+                  ("linea", (15.0, 2.6), (13.0, 3.2), colore, spessore),
+                  ("linea", (9.0, 21.4), (11.0, 20.8), colore, spessore),
+                  ("linea", (15.0, 21.4), (13.0, 20.8), colore, spessore)]
+    return pezzi
+
+
+def attesa(fase, cx=12.0, cy=12.0, r=8.0, spessore=3.2):
+    # anello grigio con un arco blu che gira (come la rotellina di Windows)
+    da = fase * 360.0 / 8 - 90
+    return [("anello", cx, cy, r, spessore + 1.6, BIANCO, 0, 360),
+            ("anello", cx, cy, r, spessore, GRIGIO, 0, 360),
+            ("anello", cx, cy, r, spessore, BLU, da, da + 110)]
+
+
+def lavoro(fase):
+    return freccia() + attesa(fase, 17.6, 17.6, 4.6, 2.2)
+
+
+def doppia(gradi, scala=1.0):
+    return [("poli", ruota(DOPPIA, gradi, scala=scala), BIANCO, NERO, 1.1)]
+
+
+def sposta():
+    return [("poli", QUATTRO, BIANCO, NERO, 1.1)]
+
+
+def mirino():
+    pezzi = []
+    for colore, spessore in ((BIANCO, 3.4), (NERO, 1.3)):
+        pezzi += [("linea", (12.0, 2.0), (12.0, 22.0), colore, spessore),
+                  ("linea", (2.0, 12.0), (22.0, 12.0), colore, spessore)]
+    return pezzi
+
+
+def vietato():
+    return [("anello", 12.0, 12.0, 7.6, 4.6, BIANCO, 0, 360),
+            ("linea", (6.6, 6.6), (17.4, 17.4), BIANCO, 4.6),
+            ("anello", 12.0, 12.0, 7.6, 2.4, NERO, 0, 360),
+            ("linea", (6.6, 6.6), (17.4, 17.4), NERO, 2.4)]
+
+
+# ---------------------------------------------------------------------- disegno
+def campiona(pezzi, x, y):
+    colore, alfa = None, 0.0
+    for p in pezzi:
+        if p[0] == "poli":
+            _, poli, riemp, bordo, sp = p
+            d = dist_bordo(x, y, poli)
+            if d <= sp / 2:
+                colore, alfa = bordo, 1.0
+            elif dentro(x, y, poli):
+                colore, alfa = riemp, 1.0
+        elif p[0] == "linea":
+            _, a, b, col, sp = p
+            if dist_segmento(x, y, a, b) <= sp / 2:
+                colore, alfa = col, 1.0
+        else:
+            _, cx, cy, r, sp, col, da, a = p
+            d = math.hypot(x - cx, y - cy)
+            if abs(d - r) <= sp / 2:
+                ang = math.degrees(math.atan2(y - cy, x - cx))
+                if a - da >= 360 or (ang - da) % 360 <= (a - da):
+                    colore, alfa = col, 1.0
+    return colore, alfa
+
+
+def ombra(pezzi, x, y):
+    # ombra morbida sotto la forma, spostata in basso a destra
+    poli = [p for p in pezzi if p[0] == "poli"]
+    if not poli:
+        return 0.0
+    x, y = x - 0.9, y - 1.1
+    for p in poli:
+        if dentro(x, y, p[1]):
+            return 0.30
+    d = min(dist_bordo(x, y, p[1]) for p in poli)
+    return 0.30 * max(0.0, 1.0 - d / 1.4)
+
+
+def immagine(pezzi, taglia):
+    s = taglia / 24.0
+    pixel = []
+    passo = 1.0 / CAMPIONI
+    for py in range(taglia):
+        for px in range(taglia):
+            r = g = b = a = 0.0
+            for j in range(CAMPIONI):
+                for i in range(CAMPIONI):
+                    x = (px + (i + 0.5) * passo) / s
+                    y = (py + (j + 0.5) * passo) / s
+                    col, al = campiona(pezzi, x, y)
+                    if col is None:
+                        al = ombra(pezzi, x, y)
+                        col = NERO
+                    r += col[0] * al
+                    g += col[1] * al
+                    b += col[2] * al
+                    a += al
+            n = CAMPIONI * CAMPIONI
+            # Xcursor: ARGB con i colori gia' moltiplicati per l'alfa
+            A = int(a / n * 255 + 0.5)
+            pixel.append((A << 24) | (int(r / n * 255 + 0.5) << 16) | (int(g / n * 255 + 0.5) << 8)
+                         | int(b / n * 255 + 0.5))
+    return pixel
+
+
+def scrivi(percorso, fotogrammi, punta, ritardo=0):
+    # file Xcursor: intestazione, indice, poi un blocco per ogni immagine
+    blocchi = []
+    for taglia in TAGLIE:
+        hx = min(taglia - 1, int(punta[0] * taglia / 24.0))
+        hy = min(taglia - 1, int(punta[1] * taglia / 24.0))
+        for pezzi in fotogrammi:
+            pix = immagine(pezzi, taglia)
+            blocchi.append((taglia, struct.pack("<9I", 36, 0xfffd0002, taglia, 1, taglia, taglia,
+                                                hx, hy, ritardo) + struct.pack("<%dI" % len(pix), *pix)))
+    testa = 16 + 12 * len(blocchi)
+    indice, pos = b"", testa
+    for taglia, dati in blocchi:
+        indice += struct.pack("<3I", 0xfffd0002, taglia, pos)
+        pos += len(dati)
+    with open(percorso, "wb") as f:
+        f.write(b"Xcur" + struct.pack("<3I", 16, 0x10000, len(blocchi)) + indice)
+        for _, dati in blocchi:
+            f.write(dati)
+
+
+# nome del file -> (fotogrammi, punta, ritardo ms, altri nomi)
+TEMA = {
+    "left_ptr": ([freccia()], (0.6, 0.6), 0,
+                 ["default", "arrow", "top_left_arrow", "left_arrow", "context-menu", "help",
+                  "question_arrow", "whats_this", "alias", "copy", "dnd-copy", "dnd-link", "link",
+                  "dnd-move", "dnd-ask", "dnd-none", "X_cursor", "right_ptr", "center_ptr",
+                  "zoom-in", "zoom-out", "pirate", "draft"]),
+    "hand2": ([mano()], (9.2, 1.0), 0,
+              ["pointer", "hand1", "hand", "pointing_hand", "grab", "grabbing", "openhand",
+               "closedhand", "dnd-none-hand", "fleur-hand"]),
+    "xterm": ([testo()], (12, 12), 0, ["text", "ibeam", "vertical-text"]),
+    "watch": ([attesa(f) for f in range(8)], (12, 12), 70, ["wait"]),
+    "left_ptr_watch": ([lavoro(f) for f in range(8)], (0.6, 0.6), 70, ["progress", "half-busy"]),
+    "sb_h_double_arrow": ([doppia(0)], (12, 12), 0,
+                          ["h_double_arrow", "ew-resize", "col-resize", "left_side", "right_side",
+                           "e-resize", "w-resize", "size_hor", "split_h"]),
+    "sb_v_double_arrow": ([doppia(90)], (12, 12), 0,
+                          ["v_double_arrow", "ns-resize", "row-resize", "top_side", "bottom_side",
+                           "n-resize", "s-resize", "size_ver", "split_v", "double_arrow"]),
+    "size_fdiag": ([doppia(45, 0.86)], (12, 12), 0,
+                   ["nwse-resize", "top_left_corner", "bottom_right_corner", "nw-resize",
+                    "se-resize", "bd_double_arrow", "ul_angle", "lr_angle"]),
+    "size_bdiag": ([doppia(-45, 0.86)], (12, 12), 0,
+                   ["nesw-resize", "top_right_corner", "bottom_left_corner", "ne-resize",
+                    "sw-resize", "fd_double_arrow", "ur_angle", "ll_angle"]),
+    "fleur": ([sposta()], (12, 12), 0, ["move", "all-scroll", "size_all"]),
+    "crosshair": ([mirino()], (12, 12), 0, ["cross", "tcross", "cell", "plus", "diamond_cross",
+                                             "cross_reverse"]),
+    "not-allowed": ([vietato()], (12, 12), 0, ["no-drop", "crossed_circle", "circle",
+                                                "forbidden", "dnd-no-drop"]),
+}
+
+
+def main():
+    if len(sys.argv) != 2:
+        sys.exit("Uso: disegna-cursori CARTELLA   (es. /usr/share/icons/Vetro)")
+    cartella = sys.argv[1]
+    dir_c = os.path.join(cartella, "cursors")
+    os.makedirs(dir_c, exist_ok=True)
+    for nome, (fotogrammi, punta, ritardo, altri) in TEMA.items():
+        scrivi(os.path.join(dir_c, nome), fotogrammi, punta, ritardo)
+        for a in altri:
+            p = os.path.join(dir_c, a)
+            if os.path.lexists(p):
+                os.remove(p)
+            os.symlink(nome, p)
+    with open(os.path.join(cartella, "index.theme"), "w") as f:
+        f.write("[Icon Theme]\nName=Vetro\nComment=Puntatori del desktop Vetro (creato da lfs.sh)\n")
+
+
+if __name__ == "__main__":
+    main()
+EOF
+chmod 755 /usr/local/lib/vetro/disegna-cursori
+rm -rf /usr/share/icons/Vetro
+python3 -I /usr/local/lib/vetro/disegna-cursori /usr/share/icons/Vetro
+[ -s /usr/share/icons/Vetro/cursors/left_ptr ] || { echo "I puntatori non si sono creati"; return 1; }
+# tema dei puntatori predefinito per tutti i programmi (anche nel desktop classico)
+install -vdm755 /usr/share/icons/default
+cat > /usr/share/icons/default/index.theme << "EOF"
+[Icon Theme]
+Name=Default
+Comment=Puntatori predefiniti (creato da lfs.sh): quelli del tema Vetro
+Inherits=Vetro
+EOF
+# i programmi GTK (Thunar, Mousepad...) li prendono dalle loro impostazioni
+if [ -f /etc/gtk-3.0/settings.ini ]; then
+  sed -i '/^gtk-cursor-theme-name/d; /^gtk-cursor-theme-size/d' /etc/gtk-3.0/settings.ini
+  sed -i '/^\[Settings\]/a gtk-cursor-theme-name = Vetro\ngtk-cursor-theme-size = 24' /etc/gtk-3.0/settings.ini
+fi
+echo "[OK] Puntatori del mouse installati ($(ls /usr/share/icons/Vetro/cursors | wc -l) forme e nomi)"
+}
+
 f10_config_hyprland() {
 # NON IN BLFS: la configurazione di Hyprland per tutti (animazioni, sfocatura,
 # angoli, ombre, tasti) e quella di partenza delle Impostazioni
@@ -12933,7 +13237,10 @@ monitor = , preferred, auto, 1
 
 # --- ambiente --------------------------------------------------------------------
 env = XCURSOR_SIZE, 24
-env = XCURSOR_THEME, AdwaitaLegacy
+# puntatori del mouse "Vetro" (freccia bianca come su Windows): li disegna il passo
+# "puntatori del mouse". AdwaitaLegacy ha solo icone: senza un tema di puntatori
+# Hyprland mostrava il suo di riserva (una goccia azzurra simile a una rotellina)
+env = XCURSOR_THEME, Vetro
 env = HYPRCURSOR_SIZE, 24
 # (niente GTK_CSD=1: su Wayland GTK3 lo ignora, perche' Hyprland chiede le barre "lato
 # server". Le barre del titolo le disegna il plugin hyprbars: vedi vetro-barre.conf)
@@ -18253,6 +18560,7 @@ LISTA_STEP17=(
   "Quickshell|quickshell-0.3.2.tar.gz|f10_quickshell"
   "icone dei pannelli|-|f10_icone_pannelli"
   "aiutanti (password, avvio, sfondo)|-|f10_aiutanti"
+  "puntatori del mouse|-|f10_cursori"
   "configurazione di Hyprland|-|f10_config_hyprland"
   "pannelli (Quickshell) e sfondi|-|f10_shell"
   "avvio del desktop Vetro|-|f10_sessione"
