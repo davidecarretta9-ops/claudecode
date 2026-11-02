@@ -1,5 +1,5 @@
 #!/bin/bash
-# Firewall (creato da lfs.sh, partendo dall'esempio "Personal Firewall" del libro BLFS)
+# Firewall (creato da vetro-arch.sh, partendo dall'esempio "Personal Firewall" del libro BLFS)
 #  - in ENTRATA passano solo le risposte a cio' che hai chiesto tu (piu' DHCP e IPv6 di base):
 #    nessuno da fuori puo' collegarsi al tuo computer
 #  - in USCITA i programmi del tuo utente passano dal Guardiano della rete, che ti chiede

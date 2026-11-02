@@ -1,5 +1,5 @@
 #!/usr/bin/python3 -I
-# Guardiano della rete - le domande sul desktop (creato da lfs.sh).
+# Guardiano della rete - le domande sul desktop (creato da vetro-arch.sh).
 # Parte da solo all'accesso. Quando un programma vuole collegarsi a internet per
 # la prima volta, mostra la finestra: Blocca / Permetti. Se non rispondi entro un
 # minuto, il collegamento resta bloccato (e la domanda torna tra 10 minuti).

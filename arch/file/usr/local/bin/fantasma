@@ -1,5 +1,5 @@
 #!/bin/bash
-# Modalita' fantasma (creato da lfs.sh): la finestra per accenderla e spegnerla.
+# Modalita' fantasma (creato da vetro-arch.sh): la finestra per accenderla e spegnerla.
 # Accesa: tutto quello che fai online passa da Tor, il tuo indirizzo IP non si vede,
 # la scheda di rete e il nome del computer sono camuffati, webcam e microfono spenti.
 AIUTO=/usr/local/sbin/fantasma-aiuto
@@ -46,11 +46,14 @@ Aspetta un po' e riapri questa finestra, oppure spegni la modalità fantasma."
   fi
 }
 
+# spegni [subito]: "subito" quando hai gia' premuto Spegni (niente seconda domanda)
 spegni() {
-  finestra --image dialog-warning --button "Annulla:1" --button "Spegni:0" \
-           --text "<b>Spegnere la modalità fantasma?</b>
+  if [ "${1:-}" != subito ]; then
+    finestra --image dialog-warning --button "Annulla:1" --button "Spegni:0" \
+             --text "<b>Spegnere la modalità fantasma?</b>
 
 I siti torneranno a vedere il tuo indirizzo IP." || return 0
+  fi
   local msg
   if ! msg=$(sudo -n "$AIUTO" spegni 2>&1); then
     finestra --image dialog-error --button OK:0 \
@@ -82,8 +85,9 @@ case "$(sudo -n "$AIUTO" stato 2>/dev/null)" in
       testo="<b>La modalità fantasma è accesa</b>, ma Tor non si è ancora collegato:
 internet resta bloccato finché non si collega."
     fi
-    finestra --image fantasma --button "Spegni:2" --button "Chiudi:0" --text "$testo"
-    [ $? -eq 2 ] && spegni ;;
+    finestra --image fantasma --button "Spegni:2" --button "Chiudi:0" --text "$testo
+I siti torneranno a vedere il tuo indirizzo IP se la spegni."
+    [ $? -eq 2 ] && spegni subito ;;
   spento)
     finestra --image fantasma --button "Annulla:1" --button "Accendi:0" --text "<b>Modalità fantasma</b>
 

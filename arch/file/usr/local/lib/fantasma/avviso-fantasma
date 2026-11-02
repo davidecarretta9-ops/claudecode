@@ -1,5 +1,5 @@
 #!/bin/sh
-# Creato da lfs.sh: in modalita' fantasma, prima di aprire Firefox o Thunderbird avvisa
+# Creato da vetro-arch.sh: in modalita' fantasma, prima di aprire Firefox o Thunderbird avvisa
 # che possono farti riconoscere (account, cookie, impronta del programma).
 # Si usa come /usr/local/bin/firefox e /usr/local/bin/thunderbird.
 nome=$(basename "$0")

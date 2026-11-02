@@ -1,5 +1,5 @@
 #!/usr/bin/python3 -I
-# Regole della rete (creato da lfs.sh): i programmi che hai permesso o bloccato
+# Regole della rete (creato da vetro-arch.sh): i programmi che hai permesso o bloccato
 # "per sempre". Eliminando una regola, la prossima volta il guardiano chiede di nuovo.
 import json, os, socket, subprocess, sys
 

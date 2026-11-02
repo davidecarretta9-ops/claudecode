@@ -1,0 +1,95 @@
+# --- Fase 4: sicurezza ----------------------------------------------------------------------
+# Firewall (nessuno entra da fuori), Guardiano della rete (chiede prima che un programma
+# esca), modalita' fantasma (tutto da Tor, accesa di serie) e l'utente fantasma.
+PKG_FASE4=(iptables tor wireguard-tools)
+FILE_SICUREZZA="etc/modules-load.d/vetro.conf usr/local/sbin/firewall-avvia
+                usr/local/sbin/guardiano-rete usr/local/sbin/fantasma-aiuto
+                usr/local/bin/guardiano-avvisi usr/local/bin/guardiano-regole usr/local/bin/fantasma
+                usr/local/lib/fantasma etc/systemd/system/firewall.service
+                etc/systemd/system/guardiano-rete.service etc/systemd/system/tor-fantasma.service
+                etc/systemd/system/fantasma-avvio.service etc/sudoers.d/30-fantasma
+                usr/share/applications/fantasma.desktop usr/share/applications/guardiano-regole.desktop"
+FILE_UTENTE_FANTASMA="etc/systemd/system/home-fantasma.mount etc/systemd/system/fantasma-casa.service
+                      etc/sudoers.d/31-utente-fantasma usr/local/share/fantasma/casa"
+FASE4=("fantasma|f4_fantasma|$(echo $FILE_SICUREZZA)"
+       "utente-fantasma|f4_utente_fantasma|$(echo $FILE_UTENTE_FANTASMA)")
+
+# installa solo i pacchetti che mancano: "pacman -T" guarda anche chi li fornisce (es.
+# iptables-nft al posto di iptables, che pacman --noconfirm non sostituirebbe)
+installa_se_mancano() {
+    local mancano
+    mancano=$(esegui pacman -T "$@") || true
+    # shellcheck disable=SC2086
+    if [ -n "$mancano" ]; then installa_pacchetti $mancano; fi
+}
+
+f4_fantasma() {
+    local p u
+    installa_se_mancano "${PKG_FASE4[@]}"
+    for p in $FILE_SICUREZZA; do
+        if [ -d "$VETRO_FILE/$p" ]; then installa_cartella "$p"; else installa_file "$p"; fi
+    done
+    esegui visudo -cf "$(percorso /etc/sudoers.d/30-fantasma)"
+    # il gruppo che risponde alle domande del Guardiano
+    u=$(utente_vetro) || exit 1
+    esegui groupadd -f guardiano
+    esegui usermod -aG guardiano "$u"
+    # sfondo scuro e icona del fantasma
+    mkdir -p "$(percorso /usr/share/backgrounds)"
+    esegui python3 -I "$(percorso /usr/local/lib/fantasma/disegna-fantasma)" sfondo \
+           "$(percorso /usr/share/backgrounds/sfondo-fantasma.png)"
+    for p in 32 48 64 128 256; do
+        mkdir -p "$(percorso "/usr/share/icons/hicolor/${p}x${p}/apps")"
+        esegui python3 -I "$(percorso /usr/local/lib/fantasma/disegna-fantasma)" icona \
+               "$(percorso "/usr/share/icons/hicolor/${p}x${p}/apps/fantasma.png")" "$p"
+    done
+    esegui gtk-update-icon-cache -qtf "$(percorso /usr/share/icons/hicolor)" || true
+    # Thunderbird in modalita' fantasma avvisa prima di aprirsi
+    if [ -e "$(percorso /usr/bin/thunderbird)" ]; then
+        ln -sfn ../lib/fantasma/avviso-fantasma "$(percorso /usr/local/bin/thunderbird)"
+    fi
+    # accesa di serie, una volta sola: se poi la spegni, rifacendo il passo resta spenta
+    if [ ! -e "$(percorso /etc/fantasma/predefinita)" ]; then
+        esegui python3 -I "$(percorso /usr/local/sbin/fantasma-aiuto)" prepara
+        mkdir -p "$(percorso /etc/fantasma)"
+        touch "$(percorso /etc/fantasma/predefinita)"
+    fi
+    esegui systemctl enable fantasma-avvio.service firewall.service guardiano-rete.service
+    ok "Firewall, Guardiano della rete e modalita' fantasma (accesa)"
+}
+
+f4_utente_fantasma() {
+    local uid gid
+    if ! esegui id fantasma >/dev/null 2>&1; then
+        esegui useradd -m -G video,input,audio,guardiano -s /bin/bash \
+               -c "Utente fantasma (tutto in memoria)" fantasma
+    fi
+    esegui usermod -aG video,input,audio,guardiano fantasma
+    uid=$(esegui id -u fantasma)
+    gid=$(esegui id -g fantasma)
+    installa_file etc/systemd/system/fantasma-casa.service etc/sudoers.d/31-utente-fantasma
+    installa_cartella usr/local/share/fantasma/casa
+    esegui visudo -cf "$(percorso /etc/sudoers.d/31-utente-fantasma)"
+    mkdir -p "$(percorso /etc/systemd/system)"
+    sed -e "s/@UID@/$uid/" -e "s/@GID@/$gid/" "$VETRO_FILE/etc/systemd/system/home-fantasma.mount" \
+        > "$(percorso /etc/systemd/system/home-fantasma.mount)"
+    esegui systemctl enable home-fantasma.mount fantasma-casa.service
+    ok "Utente fantasma (casa in memoria)"
+}
+
+# la password dell'utente fantasma: si chiede alla fine (i passi non possono chiedere
+# niente), solo se non ce l'ha ancora
+password_fantasma() {
+    [ -n "${VETRO_PROVA:-}" ] && return 0
+    case "$(esegui passwd -S fantasma 2>/dev/null | cut -d' ' -f2 || true)" in
+        L|NP) ;;
+        *) return 0 ;;
+    esac
+    titolo "Password dell'utente fantasma (per entrare dalla schermata di accesso)"
+    local volta
+    for volta in 1 2 3; do
+        if esegui passwd fantasma; then return 0; fi
+        avviso "Password non cambiata, riprova ($volta di 3)"
+    done
+    avviso "Password del fantasma non impostata: la metti dopo con  sudo passwd fantasma"
+}

@@ -4,6 +4,15 @@
 # Il registro di Hyprland e' in ~/.cache/hyprland.log (quello della volta prima in
 # ~/.cache/hyprland-prima.log).
 export PATH="/usr/local/bin:$PATH"
+# l'utente fantasma: prima la modalita' fantasma (tutto da Tor); se non si accende il
+# desktop non parte (per sicurezza) e si torna alla schermata di accesso
+if [ "$(id -un)" = fantasma ]; then
+    export TZ=UTC HISTFILE=/dev/null
+    if ! sudo -n /usr/local/sbin/fantasma-aiuto accendi; then
+        echo "Non riesco ad accendere la modalita' fantasma: per sicurezza il desktop non parte." >&2
+        exit 1
+    fi
+fi
 CONF="${XDG_CONFIG_HOME:-$HOME/.config}"
 mkdir -p "$CONF/hypr" "$CONF/vetro" "$HOME/.cache"
 [ -f "$CONF/hypr/personale.conf" ] || printf '# Le tue modifiche a Hyprland (le legge per ultime)\n' > "$CONF/hypr/personale.conf"

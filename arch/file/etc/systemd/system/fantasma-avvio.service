@@ -1,5 +1,5 @@
 [Unit]
-Description=Modalita' fantasma: nome del computer e identificativo nascosti (lfs.sh)
+Description=Modalita' fantasma: nome del computer e identificativo nascosti (vetro-arch.sh)
 DefaultDependencies=no
 After=local-fs.target
 Before=network-pre.target systemd-networkd.service dbus.service sysinit.target

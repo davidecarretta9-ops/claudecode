@@ -1,5 +1,5 @@
 #!/usr/bin/python3 -I
-# Guardiano della rete (creato da lfs.sh).
+# Guardiano della rete (creato da vetro-arch.sh).
 # Prima che un programma del tuo utente si colleghi a internet per la prima volta,
 # il collegamento viene fermato e nel desktop compare la domanda: Permetti o Blocca.
 # Le risposte "sempre" restano in /etc/guardiano-rete/regole.

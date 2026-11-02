@@ -21,6 +21,7 @@ cmd_tutto() {
     titolo "Fase 2 - desktop";               esegui_fase "${FASE2[@]}"
     titolo "Fase 3 - programmi";             esegui_fase "${FASE3[@]}"
     titolo "Fase 4 - sicurezza";             esegui_fase "${FASE4[@]}"
+    if declare -F password_fantasma >/dev/null; then password_fantasma; fi
     titolo "Fatto. Riavvia il computer:  reboot"
 }
 

@@ -1,5 +1,5 @@
 [Unit]
-Description=Tor per la modalita' fantasma (lfs.sh)
+Description=Tor per la modalita' fantasma (vetro-arch.sh)
 After=network-online.target firewall.service
 Wants=network-online.target
 

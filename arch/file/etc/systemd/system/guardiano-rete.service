@@ -4,6 +4,8 @@ After=firewall.service
 Wants=firewall.service
 
 [Service]
+# rispondono alle domande i membri del gruppo "guardiano" (tu e l'utente fantasma)
+Environment=GUARDIANO_GRUPPO=guardiano
 ExecStart=/usr/local/sbin/guardiano-rete
 Restart=always
 RestartSec=1

@@ -1,0 +1,12 @@
+# (creato da vetro-arch.sh: @UID@ e @GID@ diventano quelli dell'utente fantasma)
+[Unit]
+Description=Casa dell'utente fantasma (in memoria: si cancella allo spegnimento)
+
+[Mount]
+What=tmpfs
+Where=/home/fantasma
+Type=tmpfs
+Options=mode=0700,uid=@UID@,gid=@GID@,size=40%,nosuid,nodev
+
+[Install]
+WantedBy=local-fs.target
