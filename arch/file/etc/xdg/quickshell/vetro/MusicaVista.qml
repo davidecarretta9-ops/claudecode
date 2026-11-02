@@ -52,10 +52,12 @@ Item {
         id: fondo
         anchors.fill: parent
         radius: Tema.raggioRiquadro
-        color: Qt.rgba(vista.tinta.r * 0.42, vista.tinta.g * 0.42, vista.tinta.b * 0.42, 0.96)
+        // lo stesso colore della copertina, scuro e pieno (come nel video)
+        color: Qt.hsla(vista.tinta.hslHue < 0 ? 0.6 : vista.tinta.hslHue,
+                       Math.max(0.35, vista.tinta.hslSaturation), 0.17, 0.96)
         border.width: 1
-        border.color: Qt.rgba(Math.min(1, vista.tinta.r * 1.3), Math.min(1, vista.tinta.g * 1.3),
-                              Math.min(1, vista.tinta.b * 1.3), 0.55)
+        border.color: Qt.hsla(vista.tinta.hslHue < 0 ? 0.6 : vista.tinta.hslHue,
+                              Math.max(0.45, vista.tinta.hslSaturation), 0.45, 0.7)
         Behavior on color { ColorAnimation { duration: Tema.media } }
 
         ClippingRectangle {
@@ -137,8 +139,8 @@ Item {
                     width: parent.width * avanzamento.frazione
                     height: parent.height
                     radius: 2
-                    color: Qt.rgba(Math.min(1, vista.tinta.r * 1.6 + 0.2), Math.min(1, vista.tinta.g * 1.6 + 0.2),
-                                   Math.min(1, vista.tinta.b * 1.6 + 0.2), 1)
+                    color: Qt.hsla(vista.tinta.hslHue < 0 ? 0.6 : vista.tinta.hslHue,
+                                   Math.max(0.5, vista.tinta.hslSaturation), 0.55, 1)
                 }
                 // il pallino ad anello
                 Rectangle {

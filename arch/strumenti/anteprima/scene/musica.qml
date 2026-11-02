@@ -12,7 +12,7 @@ Item {
         anchors.centerIn: parent
         titolo: "Notte di vetro"
         artista: "Orchestra leggera"
-        copertina: sfondi + "/vetro-sfera.jpg"
+        copertina: sfondi + "/vetro-magenta.jpg"
         posizione: 32
         durata: 219
         suona: false
