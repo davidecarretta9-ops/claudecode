@@ -91,6 +91,31 @@ test_anteprime_blocco() {
     anteprime blocco
 }
 
+test_impostazioni_chiare() {
+    contiene "$V/FinestraImpostazioni.qml" "VoceLato"
+    contiene "$V/FinestraImpostazioni.qml" "Tema.appFondo"
+    non_contiene "$V/FinestraImpostazioni.qml" "Tema.fondoPieno"
+    # niente colori dei pannelli scuri (testo bianco) sulla finestra chiara
+    if grep -nE 'Tema\.(testo|testo2|testo3|carta|cartaForte|cartaSopra|bordo|bordoForte)([^A-Za-z0-9]|$)' "$V/FinestraImpostazioni.qml" >/dev/null; then
+        fallita "FinestraImpostazioni usa ancora colori dei pannelli scuri"
+    else ok_prova "FinestraImpostazioni usa solo i colori chiari"; fi
+    contiene "$V/VoceLato.qml" "Tema.accento"
+    sintassi VoceLato.qml FinestraImpostazioni.qml Interruttore.qml Cursore.qml
+}
+
+test_su_chiaro() {
+    contiene "$V/Interruttore.qml" "property bool suChiaro: false"
+    contiene "$V/Cursore.qml" "property bool suChiaro: false"
+    contiene "$V/FinestraImpostazioni.qml" "suChiaro: true"
+}
+
+test_anteprime_impostazioni() {
+    anteprime impostazioni-lato
+}
+
+prova test_impostazioni_chiare
+prova test_su_chiaro
+prova test_anteprime_impostazioni
 prova test_blocco
 prova test_password_sbagliata_blocco
 prova test_niente_statistiche

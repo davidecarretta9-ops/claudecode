@@ -1,9 +1,10 @@
-// Interruttore acceso/spento, con l'animazione (creato da lfs.sh, Fase 10)
+// Interruttore acceso/spento, con l'animazione (creato da vetro-arch.sh)
 import QtQuick
 
 Item {
     id: interruttore
     property bool acceso: false
+    property bool suChiaro: false       // su una finestra chiara (Impostazioni)
     signal cambiato(bool valore)
 
     implicitWidth: 46
@@ -12,7 +13,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: height / 2
-        color: interruttore.acceso ? Tema.accento : Tema.cartaSopra
+        color: interruttore.acceso ? Tema.accento : (interruttore.suChiaro ? Qt.rgba(0, 0, 0, 0.16) : Tema.cartaSopra)
         Behavior on color { ColorAnimation { duration: Tema.media } }
 
         Rectangle {

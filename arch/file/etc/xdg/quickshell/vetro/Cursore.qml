@@ -1,9 +1,10 @@
-// Cursore da trascinare (volume, trasparenza...) (creato da lfs.sh, Fase 10)
+// Cursore da trascinare (volume, trasparenza...) (creato da vetro-arch.sh)
 import QtQuick
 
 Item {
     id: cursore
     property real valore: 0.5          // 0..1
+    property bool suChiaro: false      // su una finestra chiara (Impostazioni)
     property string icona: ""
     signal spostato(real valore)
 
@@ -14,7 +15,7 @@ Item {
         id: binario
         anchors.fill: parent
         radius: height / 2
-        color: Tema.cartaForte
+        color: cursore.suChiaro ? Qt.rgba(0, 0, 0, 0.08) : Tema.cartaForte
         clip: true
 
         Rectangle {

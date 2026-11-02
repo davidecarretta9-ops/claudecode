@@ -1,4 +1,4 @@
-// Impostazioni del desktop Vetro (creato da lfs.sh, Fase 10): a sinistra le voci,
+// Impostazioni del desktop Vetro (creato da vetro-arch.sh), finestra chiara: a sinistra le voci,
 // a destra le scelte. Tutto vale subito e resta salvato. Si apre con Windows+I,
 // dal centro di controllo o dall'icona delle Impostazioni.
 import QtQuick
@@ -38,9 +38,9 @@ FloatingWindow {
         id: corpo
         anchors.fill: parent
         radius: Tema.raggio
-        color: Tema.fondoPieno
+        color: Tema.appFondo
         border.width: 1
-        border.color: Tema.bordoForte
+        border.color: Tema.appBordo
         clip: true
 
         RowLayout {
@@ -51,15 +51,24 @@ FloatingWindow {
             Rectangle {
                 Layout.preferredWidth: 260
                 Layout.fillHeight: true
-                color: Tema.carta
+                color: Tema.appCarta
 
                 ColumnLayout {
                     anchors.fill: parent
                     anchors.margins: 14
                     spacing: 8
 
-                    // (i tre pulsanti tondi e lo spostamento: li ha la barra del titolo
-                    // delle finestre, quella del plugin hyprbars)
+                    // (i tasti e lo spostamento: li ha la barra del titolo delle
+                    // finestre, quella del plugin hyprbars)
+                    Text {
+                        Layout.leftMargin: 6
+                        Layout.topMargin: 4
+                        text: "Impostazioni"
+                        font.family: Tema.carattere
+                        font.pixelSize: 20
+                        font.weight: Font.Bold
+                        color: Tema.appTesto
+                    }
 
                     // chi sei
                     RowLayout {
@@ -73,12 +82,12 @@ FloatingWindow {
                             Text {
                                 text: Opzioni.nomeUtente() || Sistema.utente
                                 font.family: Tema.carattere; font.pixelSize: 15; font.weight: Font.DemiBold
-                                color: Tema.testo
+                                color: Tema.appTesto
                             }
                             Text {
                                 text: Sistema.nomeComputer
                                 font.family: Tema.carattere; font.pixelSize: 11
-                                color: Tema.testo2
+                                color: Tema.appTesto2
                             }
                         }
                     }
@@ -90,51 +99,13 @@ FloatingWindow {
                         clip: true
                         spacing: 2
                         model: finestra.voci
-                        currentIndex: {
-                            for (let i = 0; i < finestra.voci.length; i++)
-                                if (finestra.voci[i].id === Stato.pagina) return i;
-                            return 0;
-                        }
-                        highlightMoveDuration: Tema.media
-                        highlight: Rectangle { radius: Tema.raggioPiccolo; color: Tema.accento }
-                        delegate: Item {
+                        delegate: VoceLato {
                             required property var modelData
-                            required property int index
                             width: menu.width
-                            height: 40
-                            readonly property bool scelta: Stato.pagina === modelData.id
-                            Rectangle {
-                                anchors.fill: parent
-                                radius: Tema.raggioPiccolo
-                                color: areaVoce.containsMouse && !parent.scelta ? Tema.cartaForte : "transparent"
-                            }
-                            Row {
-                                anchors.left: parent.left
-                                anchors.leftMargin: 12
-                                anchors.verticalCenter: parent.verticalCenter
-                                spacing: 12
-                                Icona {
-                                    nome: modelData.icona
-                                    dimensione: 19
-                                    piena: parent.parent.scelta
-                                    color: parent.parent.scelta ? Tema.suAccento : Tema.testo2
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                                Text {
-                                    text: modelData.nome
-                                    font.family: Tema.carattere; font.pixelSize: 13
-                                    font.weight: parent.parent.scelta ? Font.DemiBold : Font.Normal
-                                    color: parent.parent.scelta ? Tema.suAccento : Tema.testo
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                            }
-                            MouseArea {
-                                id: areaVoce
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: Stato.pagina = modelData.id
-                            }
+                            icona: modelData.icona
+                            testo: modelData.nome
+                            scelta: Stato.pagina === modelData.id
+                            onCliccata: Stato.pagina = modelData.id
                         }
                     }
                 }
@@ -156,7 +127,7 @@ FloatingWindow {
                         anchors.verticalCenter: parent.verticalCenter
                         text: finestra.nomeDi(Stato.pagina)
                         font.family: Tema.carattere; font.pixelSize: 22; font.weight: Font.Bold
-                        color: Tema.testo
+                        color: Tema.appTesto
                     }
                 }
 
@@ -219,17 +190,17 @@ FloatingWindow {
                         Text {
                             text: Saluto.frase(oraG.date) + (Opzioni.nomeUtente() !== "" ? ", " + Opzioni.nomeUtente() : "")
                             font.family: Tema.carattere; font.pixelSize: 24; font.weight: Font.Bold
-                            color: Tema.testo
+                            color: Tema.appTesto
                         }
                         Text {
                             text: oraG.date.toLocaleString(Qt.locale("it_IT"), "dddd d MMMM  ·  HH:mm")
                             font.family: Tema.carattere; font.pixelSize: 13
-                            color: Tema.testo2
+                            color: Tema.appTesto2
                         }
                         Text {
                             text: "Tema " + Tema.attuale.nome + "  ·  acceso da " + Sistema.testoAcceso()
                             font.family: Tema.carattere; font.pixelSize: 12
-                            color: Tema.testo3
+                            color: Tema.appTesto3
                         }
                     }
                 }
@@ -237,7 +208,7 @@ FloatingWindow {
             Text {
                 text: "Cosa vuoi cambiare?"
                 font.family: Tema.carattere; font.pixelSize: 14; font.weight: Font.DemiBold
-                color: Tema.testo2
+                color: Tema.appTesto2
             }
             GridLayout {
                 Layout.fillWidth: true
@@ -259,16 +230,16 @@ FloatingWindow {
                             Rectangle {
                                 Layout.preferredWidth: 42; Layout.preferredHeight: 42
                                 radius: 13
-                                color: Tema.cartaForte
-                                Icona { anchors.centerIn: parent; nome: modelData.icona; dimensione: 22 }
+                                color: Tema.appSopra
+                                Icona { anchors.centerIn: parent; nome: modelData.icona; dimensione: 22; color: Tema.appTesto2 }
                             }
                             Text {
                                 Layout.fillWidth: true
                                 text: modelData.nome
                                 font.family: Tema.carattere; font.pixelSize: 14; font.weight: Font.DemiBold
-                                color: Tema.testo
+                                color: Tema.appTesto
                             }
-                            Icona { nome: "chevron_right"; dimensione: 20; color: Tema.testo3 }
+                            Icona { nome: "chevron_right"; dimensione: 20; color: Tema.appTesto3 }
                         }
                     }
                 }
@@ -293,7 +264,7 @@ FloatingWindow {
                             radius: Tema.raggioMedio
                             color: modelData.fondo
                             border.width: Opzioni.tema === modelData.id ? 3 : 1
-                            border.color: Opzioni.tema === modelData.id ? Tema.accento : Tema.bordoForte
+                            border.color: Opzioni.tema === modelData.id ? Tema.accento : Tema.appBordo
                             scale: areaT.containsMouse ? 1.04 : 1
                             Behavior on scale { NumberAnimation { duration: Tema.veloce } }
                             Rectangle {
@@ -321,7 +292,7 @@ FloatingWindow {
                             text: modelData.nome
                             font.family: Tema.carattere; font.pixelSize: 12
                             font.weight: Opzioni.tema === modelData.id ? Font.DemiBold : Font.Normal
-                            color: Tema.testo
+                            color: Tema.appTesto
                         }
                     }
                 }
@@ -332,6 +303,7 @@ FloatingWindow {
                     titolo: "Trasparenza dei pannelli"
                     sottotitolo: "Più trasparente: si vede di più lo sfondo, sfocato"
                     Cursore {
+                        suChiaro: true
                         Layout.preferredWidth: 220
                         valore: (0.95 - Opzioni.opacita) / 0.6
                         onSpostato: v => Opzioni.opacita = Math.round((0.95 - v * 0.6) * 100) / 100
@@ -351,9 +323,9 @@ FloatingWindow {
                         Layout.fillWidth: true
                         Layout.preferredHeight: width * 0.6
                         radius: Tema.raggioPiccolo
-                        color: Tema.carta
+                        color: Tema.appCarta
                         border.width: modelData === Sfondi.attuale ? 3 : 1
-                        border.color: modelData === Sfondi.attuale ? Tema.accento : Tema.bordo
+                        border.color: modelData === Sfondi.attuale ? Tema.accento : Tema.appBordo
                         Image {
                             anchors.fill: parent
                             anchors.margins: 3
@@ -387,17 +359,17 @@ FloatingWindow {
                 Riga {
                     titolo: "Animazioni"
                     sottotitolo: "Finestre e pannelli si muovono in modo fluido"
-                    Interruttore { acceso: Opzioni.animazioni; onCambiato: v => Opzioni.animazioni = v }
+                    Interruttore { suChiaro: true; acceso: Opzioni.animazioni; onCambiato: v => Opzioni.animazioni = v }
                 }
                 Riga {
                     titolo: "Sfocatura"
                     sottotitolo: "Lo sfondo dietro i pannelli si vede sfocato (effetto vetro)"
-                    Interruttore { acceso: Opzioni.sfocatura; onCambiato: v => Opzioni.sfocatura = v }
+                    Interruttore { suChiaro: true; acceso: Opzioni.sfocatura; onCambiato: v => Opzioni.sfocatura = v }
                 }
                 Riga {
                     titolo: "Affianca le finestre"
                     sottotitolo: "Le finestre nuove si dividono lo schermo da sole (per le finestre già aperte: Windows+V)"
-                    Interruttore { acceso: Opzioni.affianca; onCambiato: v => Opzioni.affianca = v }
+                    Interruttore { suChiaro: true; acceso: Opzioni.affianca; onCambiato: v => Opzioni.affianca = v }
                 }
             }
             Gruppo {
@@ -405,6 +377,7 @@ FloatingWindow {
                     titolo: "Spazio tra le finestre"
                     sottotitolo: Opzioni.spazi + " pixel"
                     Cursore {
+                        suChiaro: true
                         Layout.preferredWidth: 220
                         valore: Opzioni.spazi / 32
                         onSpostato: v => Opzioni.spazi = Math.round(v * 32)
@@ -414,6 +387,7 @@ FloatingWindow {
                     titolo: "Angoli arrotondati"
                     sottotitolo: Opzioni.angoli + " pixel"
                     Cursore {
+                        suChiaro: true
                         Layout.preferredWidth: 220
                         valore: Opzioni.angoli / 28
                         onSpostato: v => Opzioni.angoli = Math.round(v * 28)
@@ -439,7 +413,7 @@ FloatingWindow {
                 Riga {
                     titolo: "Secondi nell'orologio"
                     sottotitolo: "Nella barra in basso"
-                    Interruttore { acceso: Opzioni.secondi; onCambiato: v => Opzioni.secondi = v }
+                    Interruttore { suChiaro: true; acceso: Opzioni.secondi; onCambiato: v => Opzioni.secondi = v }
                 }
             }
             Titolo { testo: "App nella barra" }
@@ -470,7 +444,7 @@ FloatingWindow {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 40
                 radius: 20
-                color: Tema.cartaForte
+                color: Tema.appSopra
                 TextInput {
                     id: cercaApp
                     anchors.fill: parent
@@ -478,7 +452,7 @@ FloatingWindow {
                     anchors.rightMargin: 18
                     verticalAlignment: TextInput.AlignVCenter
                     font.family: Tema.carattere; font.pixelSize: 13
-                    color: Tema.testo
+                    color: Tema.appTesto
                     clip: true
                     Text {
                         anchors.fill: parent
@@ -486,7 +460,7 @@ FloatingWindow {
                         visible: cercaApp.text === ""
                         text: "Scrivi il nome dell'app..."
                         font: cercaApp.font
-                        color: Tema.testo3
+                        color: Tema.appTesto3
                     }
                 }
             }
@@ -522,7 +496,7 @@ FloatingWindow {
                 Riga {
                     titolo: "Meteo"
                     sottotitolo: "Lo chiede a wttr.in ogni mezz'ora (in modalità fantasma passa da Tor)"
-                    Interruttore { acceso: Opzioni.meteo; onCambiato: v => Opzioni.meteo = v }
+                    Interruttore { suChiaro: true; acceso: Opzioni.meteo; onCambiato: v => Opzioni.meteo = v }
                 }
                 Riga {
                     titolo: "Città"
@@ -531,7 +505,7 @@ FloatingWindow {
                         Layout.preferredWidth: 220
                         Layout.preferredHeight: 34
                         radius: 17
-                        color: Tema.cartaForte
+                        color: Tema.appSopra
                         TextInput {
                             id: citta
                             anchors.fill: parent
@@ -540,7 +514,7 @@ FloatingWindow {
                             verticalAlignment: TextInput.AlignVCenter
                             text: Opzioni.citta
                             font.family: Tema.carattere; font.pixelSize: 13
-                            color: Tema.testo
+                            color: Tema.appTesto
                             clip: true
                             onEditingFinished: Opzioni.citta = text.trim()
                             Text {
@@ -549,7 +523,7 @@ FloatingWindow {
                                 visible: citta.text === "" && !citta.activeFocus
                                 text: "es. Roma"
                                 font: citta.font
-                                color: Tema.testo3
+                                color: Tema.appTesto3
                             }
                         }
                     }
@@ -573,7 +547,7 @@ FloatingWindow {
                 Riga {
                     titolo: "Non disturbare"
                     sottotitolo: "Le notifiche arrivano lo stesso, ma senza comparire (tranne quelle urgenti)"
-                    Interruttore { acceso: Opzioni.nonDisturbare; onCambiato: v => Opzioni.nonDisturbare = v }
+                    Interruttore { suChiaro: true; acceso: Opzioni.nonDisturbare; onCambiato: v => Opzioni.nonDisturbare = v }
                 }
                 Riga {
                     titolo: Avvisi.quante === 1 ? "1 notifica da leggere" : Avvisi.quante + " notifiche da leggere"
@@ -610,13 +584,13 @@ FloatingWindow {
                                 width: testoMin.implicitWidth + 22
                                 height: 32
                                 radius: 16
-                                color: Opzioni.bloccoMinuti === modelData ? Tema.accento : (areaMin.containsMouse ? Tema.cartaSopra : Tema.cartaForte)
+                                color: Opzioni.bloccoMinuti === modelData ? Tema.accento : (areaMin.containsMouse ? Tema.appBordo : Tema.appSopra)
                                 Text {
                                     id: testoMin
                                     anchors.centerIn: parent
                                     text: modelData === 0 ? "Mai" : modelData + " min"
                                     font.family: Tema.carattere; font.pixelSize: 12; font.weight: Font.Medium
-                                    color: Opzioni.bloccoMinuti === modelData ? Tema.suAccento : Tema.testo
+                                    color: Opzioni.bloccoMinuti === modelData ? Tema.suAccento : Tema.appTesto
                                 }
                                 MouseArea {
                                     id: areaMin
@@ -766,14 +740,14 @@ FloatingWindow {
                             anchors.fill: parent
                             anchors.margins: 14
                             spacing: 12
-                            Icona { nome: modelData.icona; dimensione: 22 }
+                            Icona { nome: modelData.icona; dimensione: 22; color: Tema.appTesto2 }
                             Text {
                                 Layout.fillWidth: true
                                 text: modelData.nome
                                 font.family: Tema.carattere; font.pixelSize: 13; font.weight: Font.DemiBold
-                                color: Tema.testo
+                                color: Tema.appTesto
                             }
-                            Icona { nome: "open_in_new"; dimensione: 16; color: Tema.testo3 }
+                            Icona { nome: "open_in_new"; dimensione: 16; color: Tema.appTesto3 }
                         }
                     }
                 }
@@ -789,7 +763,7 @@ FloatingWindow {
         font.family: Tema.carattere
         font.pixelSize: 14
         font.weight: Font.DemiBold
-        color: Tema.testo2
+        color: Tema.appTesto2
     }
 
     // un gruppo di righe dentro una carta
@@ -799,9 +773,9 @@ FloatingWindow {
         Layout.fillWidth: true
         implicitHeight: colonnaG.implicitHeight
         radius: Tema.raggioMedio
-        color: Tema.carta
+        color: Tema.appCarta
         border.width: 1
-        border.color: Tema.bordo
+        border.color: Tema.appBordo
         ColumnLayout {
             id: colonnaG
             anchors.left: parent.left
@@ -832,7 +806,7 @@ FloatingWindow {
                     text: riga.titolo
                     wrapMode: Text.Wrap
                     font.family: Tema.carattere; font.pixelSize: 13; font.weight: Font.DemiBold
-                    color: Tema.testo
+                    color: Tema.appTesto
                 }
                 Text {
                     Layout.fillWidth: true
@@ -840,7 +814,7 @@ FloatingWindow {
                     text: riga.sottotitolo
                     wrapMode: Text.Wrap
                     font.family: Tema.carattere; font.pixelSize: 11
-                    color: Tema.testo2
+                    color: Tema.appTesto2
                 }
             }
             RowLayout { id: postoComando; spacing: 8 }
@@ -851,7 +825,7 @@ FloatingWindow {
             anchors.right: parent.right
             anchors.leftMargin: 16
             height: 1
-            color: Tema.bordo
+            color: Tema.appBordo
         }
     }
 
@@ -863,14 +837,14 @@ FloatingWindow {
         implicitHeight: 34
         implicitWidth: rigaPu.implicitWidth + 26
         radius: 17
-        color: areaPu.containsMouse ? Tema.cartaSopra : Tema.cartaForte
+        color: areaPu.containsMouse ? Tema.appBordo : Tema.appSopra
         Behavior on color { ColorAnimation { duration: Tema.veloce } }
         Row {
             id: rigaPu
             anchors.centerIn: parent
             spacing: 6
-            Icona { visible: puls.icona !== ""; nome: puls.icona; dimensione: 16; anchors.verticalCenter: parent.verticalCenter }
-            Text { text: puls.testo; font.family: Tema.carattere; font.pixelSize: 12; font.weight: Font.Medium; color: Tema.testo; anchors.verticalCenter: parent.verticalCenter }
+            Icona { visible: puls.icona !== ""; nome: puls.icona; dimensione: 16; anchors.verticalCenter: parent.verticalCenter; color: Tema.appTesto2 }
+            Text { text: puls.testo; font.family: Tema.carattere; font.pixelSize: 12; font.weight: Font.Medium; color: Tema.appTesto; anchors.verticalCenter: parent.verticalCenter }
         }
         MouseArea { id: areaPu; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: puls.cliccato() }
     }
@@ -884,13 +858,13 @@ FloatingWindow {
         implicitWidth: testoScelta.implicitWidth + 22
         implicitHeight: 32
         radius: 16
-        color: scelto ? Tema.accento : (areaScelta.containsMouse ? Tema.cartaSopra : Tema.cartaForte)
+        color: scelto ? Tema.accento : (areaScelta.containsMouse ? Tema.appBordo : Tema.appSopra)
         Text {
             id: testoScelta
             anchors.centerIn: parent
             text: scelta.testo
             font.family: Tema.carattere; font.pixelSize: 12
-            color: scelta.scelto ? Tema.suAccento : Tema.testo
+            color: scelta.scelto ? Tema.suAccento : Tema.appTesto
         }
         MouseArea { id: areaScelta; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: scelta.cliccato() }
     }
