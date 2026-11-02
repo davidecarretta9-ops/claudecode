@@ -9,7 +9,7 @@ import Quickshell.Io
 Singleton {
     id: sfondi
 
-    property string attuale: "/usr/share/backgrounds/sfondo-desktop.png"
+    property string attuale: "/usr/share/backgrounds/vetro-sfera.jpg"
     property var elenco: []
     readonly property string fileScelta: (Quickshell.env("HOME") || "/tmp") + "/.config/sfondo.conf"
 
@@ -42,7 +42,7 @@ Singleton {
         command: ["sh", "-c",
             "for f in /usr/share/backgrounds/*.png /usr/share/backgrounds/*.jpg " +
             "\"$HOME\"/.local/share/sfondi/*.png \"$HOME\"/.local/share/sfondi/*.jpg; do " +
-            "[ -f \"$f\" ] || continue; case \"$f\" in */sfondo-fantasma.png|*/sfondo-desktop.png) continue ;; esac; " +
+            "[ -f \"$f\" ] || continue; case \"$f\" in */sfondo-fantasma.png) continue ;; esac; " +
             "echo \"$f\"; done"]
         stdout: StdioCollector {
             onStreamFinished: sfondi.elenco = this.text.split("\n").filter(r => r.trim() !== "")

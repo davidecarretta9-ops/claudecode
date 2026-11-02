@@ -14,7 +14,7 @@ else
   pgrep -u "$(id -u)" -x swaylock >/dev/null && exit 0
 fi
 img=$(/usr/local/bin/sfondo-desktop --percorso 2>/dev/null)
-[ -n "$img" ] && [ -f "$img" ] || img=/usr/share/backgrounds/sfondo-desktop.png
+[ -n "$img" ] && [ -f "$img" ] || img=/usr/share/backgrounds/vetro-cielo.jpg
 exec swaylock $fondo -i "$img" -s fill \
      --font "Adwaita Sans" --indicator-radius 80 --indicator-thickness 6 \
      --inside-color ffffff33 --inside-clear-color ffffff33 --inside-ver-color 0a84ff55 \

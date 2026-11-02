@@ -7,7 +7,8 @@ FILE_DESKTOP="etc/xdg/quickshell/vetro etc/xdg/hypr usr/local/lib/vetro etc/gtk-
               usr/local/bin/blocca-schermo usr/local/bin/sfondo-desktop
               usr/local/bin/vetro-barre-aggiorna etc/pam.d/vetro-blocco
               etc/pacman.d/hooks/vetro-barre.hook usr/share/icons/default/index.theme
-              usr/share/fonts/dm-sans usr/share/icons/hicolor/scalable/apps/vetro.svg etc/xdg/vetro"
+              usr/share/fonts/dm-sans usr/share/icons/hicolor/scalable/apps/vetro.svg etc/xdg/vetro
+              usr/share/backgrounds"
 FASE2=("desktop|f2_desktop|$(echo $FILE_DESKTOP)")
 
 # il carattere delle icone dei pannelli (Material Symbols): non c'e' nei pacchetti
@@ -46,14 +47,9 @@ f2_desktop() {
     done
     # i caratteri nuovi (DM Sans) si vedono subito
     esegui fc-cache -f
-    # puntatori (freccia bianca stile Windows) e sfondi, disegnati con Python
+    # puntatori (freccia bianca col bordo nero spesso), disegnati con Python; gli sfondi
+    # sono gia' pronti in usr/share/backgrounds
     esegui python3 -I "$(percorso /usr/local/lib/vetro/disegna-cursori)" "$(percorso /usr/share/icons/Vetro)"
-    mkdir -p "$(percorso /usr/share/backgrounds)"
-    for s in notte alba nebbia; do
-        [ -f "$(percorso "/usr/share/backgrounds/vetro-$s.png")" ] \
-            || esegui python3 -I "$(percorso /usr/local/lib/vetro/disegna-vetro)" \
-                      "$(percorso "/usr/share/backgrounds/vetro-$s.png")" "$s"
-    done
     # barre del titolo: file vuoto finche' il plugin non c'e', poi il plugin
     p=$(percorso /etc/xdg/hypr/vetro-barre.conf)
     [ -f "$p" ] || echo "# Barre del titolo: vuoto finche' il plugin hyprbars non c'e'" > "$p"

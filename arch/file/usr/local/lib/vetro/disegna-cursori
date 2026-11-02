@@ -1,6 +1,6 @@
 #!/usr/bin/python3 -I
-# Disegna i puntatori del mouse del desktop "Vetro" (creato da lfs.sh, Fase 10), solo
-# Python: freccia bianca col bordo nero e ombra leggera, come su Windows. Scrive un
+# Disegna i puntatori del mouse del desktop "Vetro" (creato da vetro-arch.sh), solo
+# Python: freccia bianca col bordo nero spesso e arrotondato, ombra leggera. Scrive un
 # tema Xcursor (lo leggono Hyprland, GTK, Qt e labwc):
 #   disegna-cursori CARTELLA        es. disegna-cursori /usr/share/icons/Vetro
 # Disegni originali: forme semplici (poligoni, linee, archi) su una griglia 24x24,
@@ -80,11 +80,12 @@ QUATTRO = [(12.0, 1.0), (16.2, 5.2), (13.4, 5.2), (13.4, 10.6), (18.8, 10.6), (1
 
 
 def freccia():
-    return [("poli", FRECCIA, BIANCO, NERO, 1.1)]
+    # bordo nero spesso: centrato sul contorno, arrotonda da solo gli angoli fuori
+    return [("poli", FRECCIA, BIANCO, NERO, 2.2)]
 
 
 def mano():
-    return [("poli", MANO, BIANCO, NERO, 1.1),
+    return [("poli", MANO, BIANCO, NERO, 1.8),
             ("linea", (11.0, 8.6), (11.0, 12.6), NERO, 0.9),
             ("linea", (13.6, 9.1), (13.6, 12.8), NERO, 0.9),
             ("linea", (16.2, 9.7), (16.2, 13.2), NERO, 0.9)]

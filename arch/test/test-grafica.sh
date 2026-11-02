@@ -63,6 +63,53 @@ test_fc_cache_dopo_caratteri() {
     chiamato "fc-cache"
 }
 
+# misura_jpg FILE -> "LARGHEZZAxALTEZZA" (dal blocco SOF del JPEG)
+misura_jpg() {
+    python3 -I - "$1" <<'FINE'
+import struct, sys
+d = open(sys.argv[1], "rb").read()
+i = 2
+while i < len(d):
+    if d[i] != 0xFF: break
+    m = d[i + 1]; n = struct.unpack(">H", d[i + 2:i + 4])[0]
+    if m in (0xC0, 0xC1, 0xC2):
+        a, l = struct.unpack(">HH", d[i + 5:i + 9]); print(f"{l}x{a}"); break
+    i += 2 + n
+FINE
+}
+
+test_sfondi() {
+    local s f
+    for s in sfera nuvole cielo onde magenta argento; do
+        f="$F/usr/share/backgrounds/vetro-$s.jpg"
+        uguale "ffd8" "$(head -c 2 "$f" 2>/dev/null | od -An -tx1 | tr -d ' \n')" "vetro-$s.jpg e' un JPEG"
+        uguale "2560x1440" "$(misura_jpg "$f")" "vetro-$s.jpg 2560x1440"
+        if [ -f "$f" ] && [ "$(stat -c %s "$f")" -lt 716800 ]; then ok_prova "vetro-$s.jpg sotto 700 KB"
+        else fallita "vetro-$s.jpg manca o supera 700 KB"; fi
+    done
+}
+
+test_sfondo_di_partenza() {
+    contiene "$V/Sfondi.qml" "vetro-sfera.jpg"
+    contiene "$F/usr/local/bin/sfondo-desktop" "vetro-sfera.jpg"
+    non_contiene "$V/Sfondi.qml" "sfondo-desktop.png"
+    non_contiene "$F/usr/local/bin/sfondo-desktop" "sfondo-desktop.png"
+}
+
+test_f2_senza_disegna_vetro() {
+    radice_finta; finto pacman; finto systemctl; finto python3; finto vetro-barre-aggiorna; finto fc-cache
+    mkdir -p "$RADICE/usr/share/fonts/material-symbols"
+    printf carattere > "$RADICE/usr/share/fonts/material-symbols/MaterialSymbolsRounded.ttf"
+    FONT_ICONE_SHA256=$(printf carattere | sha256sum | cut -d' ' -f1)
+    ( set -Eeuo pipefail; f2_desktop ) >/dev/null 2>&1 || fallita "f2_desktop si ferma"
+    non_chiamato "disegna-vetro"
+    esiste "$RADICE/usr/share/backgrounds/vetro-sfera.jpg"
+    non_esiste "$RADICE/usr/local/lib/vetro/disegna-vetro"
+}
+
+prova test_sfondi
+prova test_sfondo_di_partenza
+prova test_f2_senza_disegna_vetro
 prova test_fc_cache_dopo_caratteri
 prova test_carattere
 prova test_tema

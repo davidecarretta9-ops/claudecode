@@ -99,7 +99,7 @@ ShellRoot {
                     id: immagine
                     anchors.fill: parent
                     fillMode: Image.PreserveAspectCrop
-                    source: "file:///usr/share/backgrounds/vetro-notte.png"
+                    source: "file:///usr/share/backgrounds/vetro-nuvole.jpg"
                     sourceSize.width: 1280
                     sourceSize.height: 720
                     visible: false

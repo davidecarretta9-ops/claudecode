@@ -1,12 +1,12 @@
 #!/bin/sh
-# Sfondo del desktop (creato da lfs.sh). Si sceglie da Impostazioni -> Aspetto (la
+# Sfondo del desktop (creato da vetro-arch.sh). Si sceglie da Impostazioni -> Aspetto (la
 # scelta e' in ~/.config/sfondo.conf). In modalita' fantasma diventa quello scuro,
 # cosi' si vede subito se e' accesa.
 #   sfondo-desktop              mette lo sfondo (nel desktop Vetro lo disegnano i pannelli)
 #   sfondo-desktop --percorso   scrive solo quale immagine usare
 #   sfondo-desktop --swaybg     lo mette comunque con swaybg
 img=$(sed -n 's/^SFONDO=//p' "${XDG_CONFIG_HOME:-$HOME/.config}/sfondo.conf" 2>/dev/null | head -n1)
-[ -n "$img" ] && [ -f "$img" ] || img=/usr/share/backgrounds/sfondo-desktop.png
+[ -n "$img" ] && [ -f "$img" ] || img=/usr/share/backgrounds/vetro-sfera.jpg
 if [ -e /etc/fantasma/attivo ] && [ -f /usr/share/backgrounds/sfondo-fantasma.png ]; then
   img=/usr/share/backgrounds/sfondo-fantasma.png
 fi
