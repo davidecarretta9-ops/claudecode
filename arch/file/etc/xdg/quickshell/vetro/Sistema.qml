@@ -1,9 +1,10 @@
 pragma Singleton
-// Processore, memoria, disco, rete, da quanto e' acceso (creato da lfs.sh, Fase 10).
-// Legge /proc ogni 2 secondi con un solo comando.
+// Processore, memoria, disco, rete, batteria, da quanto e' acceso (creato da
+// vetro-arch.sh). Legge /proc e /sys ogni 2 secondi con un solo comando.
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "Letture.js" as Letture
 
 Singleton {
     id: sis
@@ -26,6 +27,11 @@ Singleton {
     property var storiaScarica: []
     property var storiaCarica: []
     property bool fantasma: false
+    // per la barra: batteria (-1 = non c'e') e rete ("wifi" | "cavo" | "nessuna")
+    property int batteria: -1
+    property bool inCarica: false
+    property string reteTipo: "nessuna"
+    property int reteSegnale: 0
     property string nomeComputer: ""
     property string kernel: ""
     property string processore: ""
@@ -67,11 +73,14 @@ Singleton {
     function analizza(testo) {
         let parte = "";
         let rxTot = 0, txTot = 0;
+        let testoBat = "", testoRete = "";
         const righe = testo.split("\n");
         for (let i = 0; i < righe.length; i++) {
             const r = righe[i].trim();
             if (r.startsWith("#")) { parte = r; continue; }
             if (r === "") continue;
+            if (parte === "#BAT") { testoBat += r + "\n"; continue; }
+            if (parte === "#RETE") { testoRete += r + "\n"; continue; }
             const c = r.split(/\s+/);
             if (parte === "#STAT" && c[0] === "cpu") {
                 const n = c.slice(1).map(Number);
@@ -108,6 +117,12 @@ Singleton {
                 fantasma = c[0] === "si";
             }
         }
+        const b = Letture.batteria(testoBat);
+        batteria = b.livello;
+        inCarica = b.carica;
+        const n = Letture.rete(testoRete);
+        reteTipo = n.tipo;
+        reteSegnale = n.segnale;
         const ora = Date.now() / 1000;
         if (_retePrima !== null && ora > _tempoPrima) {
             const dt = ora - _tempoPrima;
@@ -133,7 +148,12 @@ Singleton {
             "echo '#DISK'; df -Pk / | tail -n 1; " +
             "echo '#TEMP'; cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null; " +
             "echo '#GPU'; cat /sys/class/drm/card*/device/gpu_busy_percent 2>/dev/null | head -n 1; " +
-            "echo '#FANTASMA'; [ -e /etc/fantasma/attivo ] && echo si || echo no"]
+            "echo '#FANTASMA'; [ -e /etc/fantasma/attivo ] && echo si || echo no; " +
+            "echo '#BAT'; for b in /sys/class/power_supply/BAT*; do [ -r \"$b/capacity\" ] && " +
+            "echo \"$(cat \"$b/capacity\") $(cat \"$b/status\")\"; done; " +
+            "echo '#RETE'; for d in /sys/class/net/*; do [ -e \"$d/device\" ] || continue; t=cavo; " +
+            "[ -d \"$d/wireless\" ] && t=wireless; echo \"${d##*/} $t $(cat \"$d/operstate\" 2>/dev/null)\"; done; " +
+            "tail -n +3 /proc/net/wireless 2>/dev/null"]
         stdout: StdioCollector {
             onStreamFinished: sis.analizza(this.text)
         }
