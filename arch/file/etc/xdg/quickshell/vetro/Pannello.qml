@@ -135,6 +135,9 @@ PanelWindow {
                 }
             }
 
+            // --- Wi-Fi (solo se c'e' una scheda Wi-Fi) ------------------------------------
+            Wifi { Layout.fillWidth: true }
+
             // --- cerca le app ---------------------------------------------------------
             Carta {
                 Layout.fillWidth: true

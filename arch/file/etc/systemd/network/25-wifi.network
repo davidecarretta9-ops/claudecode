@@ -1,0 +1,10 @@
+# Rete Wi-Fi (creato da vetro-arch.sh): iwd si collega, systemd-networkd da' l'indirizzo
+[Match]
+Name=wl*
+
+[Network]
+DHCP=yes
+IgnoreCarrierLoss=3s
+
+[DHCPv4]
+RouteMetric=600
