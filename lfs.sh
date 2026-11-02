@@ -9563,6 +9563,7 @@ cat > /usr/local/sbin/fantasma-aiuto << "EOF"
 #                            registro di sistema solo in memoria, webcam e microfono spenti
 #   fantasma-aiuto spegni    torna tutto normale
 #   fantasma-aiuto stato | pronto | attendi | avvio (all'accensione del computer)
+#   fantasma-aiuto prepara   accesa di serie: scrive solo i file (vale dal prossimo avvio)
 # Quando e' accesa resta accesa anche dopo un riavvio, finche' non la spegni.
 import glob, os, re, secrets, subprocess, sys, time
 
@@ -9776,7 +9777,22 @@ def attendi():
         time.sleep(1)
     return False
 
+def prepara():
+    """Accesa di serie: scrive solo i file della modalita' (si usa quando si costruisce
+    la distro). Firewall, Tor, nome del computer e scheda di rete li sistema l'avvio
+    della distro quando la trova accesa. Niente comandi sulla rete: dentro il chroot
+    toccherebbero il PC che costruisce la distro."""
+    os.makedirs(CARTELLA, exist_ok=True)
+    scrivi_torrc()
+    for p, t in {**FILE, **file_rete(), **file_link()}.items():
+        scrivi(p, t)
+    open(STATO, "w").close()
+    comando("systemctl", "enable", "tor-fantasma.service")
+    print("Modalita' fantasma accesa (vale dal prossimo avvio)")
+    return True
+
 AZIONI = {"accendi": accendi, "spegni": spegni, "avvio": avvio, "attendi": attendi,
+          "prepara": prepara,
           "stato": lambda: print("acceso" if acceso() else "spento") or True,
           "pronto": lambda: acceso() and avanzamento() >= 100}
 
@@ -9784,7 +9800,7 @@ if __name__ == "__main__":
     if os.geteuid() != 0:
         sys.exit("Serve root: usa  sudo fantasma-aiuto ...")
     if len(sys.argv) != 2 or sys.argv[1] not in AZIONI:
-        sys.exit("Uso: fantasma-aiuto accendi|spegni|stato|pronto|attendi|avvio")
+        sys.exit("Uso: fantasma-aiuto accendi|spegni|stato|pronto|attendi|avvio|prepara")
     sys.exit(0 if AZIONI[sys.argv[1]]() else 1)
 EOF
 cat > /usr/local/bin/fantasma << "EOF"
@@ -10265,7 +10281,10 @@ if ! grep -q 'fantasma.desktop' /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-
   rm -rf "$casa/.config/xfce4/panel" "$casa/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml"
 fi
 update-desktop-database /usr/share/applications
-echo "[OK] Modalita' fantasma pronta (pulsante nella barra in basso)"
+# accesa di serie (si spegne dal pulsante): scrive solo i file, il resto all'avvio
+/usr/local/sbin/fantasma-aiuto prepara
+touch /etc/fantasma/predefinita
+echo "[OK] Modalita' fantasma pronta e accesa di serie (pulsante nella barra in basso)"
 }
 
 f7_utente_fantasma() {
@@ -12653,8 +12672,17 @@ scelta=$(cat "$CONF/desktop-scelto" 2>/dev/null)
 [ -n "$scelta" ] || scelta=$(cat /etc/vetro/desktop-predefinito 2>/dev/null)
 [ -n "$scelta" ] || scelta=vetro
 
+# accesso dalla schermata di blocco (sul primo terminale l'utente entra da solo, vedi
+# /etc/vetro/accesso-grafico): il desktop parte bloccato, la password si scrive li'
+if [ -e /etc/vetro/accesso-grafico ] && [ "$(tty)" = /dev/tty1 ]; then
+    export VETRO_ACCESSO=1
+    rm -f "${XDG_RUNTIME_DIR:-/tmp}/vetro-sbloccato"
+fi
+
 classico() {
     export WLR_RENDERER=pixman
+    # all'accesso anche il desktop classico parte bloccato (swaylock, vedi autostart)
+    [ "${VETRO_ACCESSO:-}" = 1 ] && export VETRO_BLOCCA_ALL_AVVIO=1
     dbus-run-session labwc > "$HOME/.labwc.log" 2>&1
 }
 
@@ -12696,6 +12724,10 @@ cat > /usr/local/bin/avvio-vetro << "EOF"
 # Programmi che partono insieme al desktop Vetro (creato da lfs.sh, Fase 10).
 # Lo lancia Hyprland (exec-once in /etc/xdg/hypr/vetro.conf).
 export PATH="/usr/local/bin:$PATH"
+# all'accesso: tasti spenti finche' non scrivi la password (prima di tutto il resto)
+if [ "${VETRO_ACCESSO:-}" = 1 ] && [ ! -e "${XDG_RUNTIME_DIR:-/tmp}/vetro-sbloccato" ]; then
+    hyprctl dispatch submap vetro-accesso >/dev/null 2>&1
+fi
 [ -x /usr/local/bin/avvia-audio ] && /usr/local/bin/avvia-audio >/dev/null 2>&1 &
 [ -x /usr/local/bin/guardiano-avvisi ] && /usr/local/bin/guardiano-avvisi >/dev/null 2>&1 &
 [ -x /usr/local/bin/benvenuto ] && /usr/local/bin/benvenuto >/dev/null 2>&1 &
@@ -12725,6 +12757,12 @@ mkdir -p "$HOME/.cache"
 
 riserva() {
     echo "--- $(date '+%F %T') i pannelli non partono: uso quelli di riserva" >> "$registro"
+    # all'accesso senza pannelli: blocca con swaylock e aspetta la password
+    if [ "${VETRO_BLOCCA_ALL_AVVIO:-}" = 1 ]; then
+        /usr/local/bin/blocca-schermo --attendi
+        touch "${XDG_RUNTIME_DIR:-/tmp}/vetro-sbloccato"
+        hyprctl dispatch submap reset >/dev/null 2>&1
+    fi
     notify-send -u critical "Desktop Vetro" "I pannelli non partono: uso quelli di riserva. Il motivo e' in ~/.cache/quickshell-vetro.log" 2>/dev/null &
     /usr/local/bin/sfondo-desktop --swaybg >/dev/null 2>&1 &
     mako --font "Adwaita Sans 11" --background-color "#202022e6" --text-color "#ffffff" \
@@ -12740,6 +12778,13 @@ risponde() {
 
 errori_rapidi=0
 while :; do
+    # all'accesso i pannelli partono bloccati, finche' non scrivi la password (anche se
+    # ripartono dopo un errore prima che tu l'abbia scritta)
+    if [ "${VETRO_ACCESSO:-}" = 1 ] && [ ! -e "${XDG_RUNTIME_DIR:-/tmp}/vetro-sbloccato" ]; then
+        export VETRO_BLOCCA_ALL_AVVIO=1
+    else
+        unset VETRO_BLOCCA_ALL_AVVIO
+    fi
     inizio=$SECONDS
     echo "--- $(date '+%F %T') avvio" >> "$registro"
     quickshell -p "$PANNELLI" >> "$registro" 2>&1 &
@@ -12843,14 +12888,20 @@ cat > /usr/local/bin/blocca-schermo << "EOF"
 # Blocca lo schermo (creato da lfs.sh): per sbloccare scrivi la tua password e premi Invio.
 # Nel desktop Vetro usa il blocco dei pannelli (orologio grande); se non risponde,
 # o nel desktop classico, usa swaylock con lo stesso sfondo del desktop.
-if pgrep -u "$(id -u)" -x Hyprland >/dev/null 2>&1 \
-   && qs -p /etc/xdg/quickshell/vetro ipc call blocco blocca >/dev/null 2>&1; then
-  exit 0
+#   blocca-schermo --attendi   solo swaylock, e aspetta finche' non sblocchi
+fondo=-f
+if [ "${1:-}" = --attendi ]; then
+  fondo=""
+else
+  if pgrep -u "$(id -u)" -x Hyprland >/dev/null 2>&1 \
+     && qs -p /etc/xdg/quickshell/vetro ipc call blocco blocca >/dev/null 2>&1; then
+    exit 0
+  fi
+  pgrep -u "$(id -u)" -x swaylock >/dev/null && exit 0
 fi
-pgrep -u "$(id -u)" -x swaylock >/dev/null && exit 0
 img=$(/usr/local/bin/sfondo-desktop --percorso 2>/dev/null)
 [ -n "$img" ] && [ -f "$img" ] || img=/usr/share/backgrounds/sfondo-desktop.png
-exec swaylock -f -i "$img" -s fill \
+exec swaylock $fondo -i "$img" -s fill \
      --font "Adwaita Sans" --indicator-radius 80 --indicator-thickness 6 \
      --inside-color ffffff33 --inside-clear-color ffffff33 --inside-ver-color 0a84ff55 \
      --inside-wrong-color ff5f5755 --ring-color ffffffcc --ring-clear-color febc2eff \
@@ -13449,6 +13500,14 @@ bindl = , XF86AudioPlay, global, quickshell:musica-play
 bindl = , XF86AudioNext, global, quickshell:musica-avanti
 bindl = , XF86AudioPrev, global, quickshell:musica-indietro
 
+# all'accesso (avvio senza la schermata a testo) il desktop parte bloccato: finche' la
+# password non e' giusta i tasti non fanno niente, cosi' nei primi secondi, prima che
+# compaia il blocco, nessuno puo' aprire un terminale. La attiva avvio-vetro, la toglie
+# il blocco dei pannelli (o swaylock) quando la password e' giusta.
+submap = vetro-accesso
+bind = $tasto, L, global, quickshell:blocca
+submap = reset
+
 # --- avvio ------------------------------------------------------------------------
 exec-once = /usr/local/bin/avvio-vetro
 
@@ -13670,8 +13729,7 @@ ClippingRectangle {
 }
 EOF
 cat > "$d/Avvio.qml" << "EOF"
-// Cerca e apri le app (creato da lfs.sh, Fase 10): tasto Windows, Windows+Spazio o
-// l'icona in alto a sinistra. Scrivi, scegli con le frecce e premi Invio. Senza
+// Cerca e apri le app (creato da lfs.sh, Fase 10): tasto Windows o Windows+Spazio. Scrivi, scegli con le frecce e premi Invio. Senza
 // scrivere niente mostra tutte le app (come il Launchpad).
 import QtQuick
 import QtQuick.Layouts
@@ -13905,9 +13963,9 @@ Singleton {
 }
 EOF
 cat > "$d/Barra.qml" << "EOF"
-// La barra in alto (creato da lfs.sh, Fase 10): a sinistra le app e le scrivanie,
-// al centro data e ora (aprono il cruscotto), a destra volume, notifiche e il
-// centro di controllo.
+// La barra in alto (creato da lfs.sh, Fase 10): al centro data e ora (aprono il
+// cruscotto), a destra volume, notifiche e il centro di controllo. Le app si cercano
+// col tasto Windows.
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -13939,90 +13997,6 @@ PanelWindow {
     // la barra ci entra, cosi' i suoi tasti rispondono al primo clic
     Component.onCompleted: Stato.barre = Stato.barre.concat([barra])
     Component.onDestruction: Stato.barre = Stato.barre.filter(b => b !== barra)
-
-    // ---------------------------------------------------------------- a sinistra
-    Rectangle {
-        id: sinistra
-        anchors.left: parent.left
-        anchors.leftMargin: 10
-        anchors.top: parent.top
-        anchors.topMargin: 6
-        height: 36
-        width: filaSinistra.width + 12
-        radius: height / 2
-        color: Tema.fondo
-        border.width: 1
-        border.color: Tema.bordo
-        Behavior on width { NumberAnimation { duration: Tema.media; easing.type: Easing.OutCubic } }
-
-        Row {
-            id: filaSinistra
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.left: parent.left
-            anchors.leftMargin: 6
-            spacing: 8
-
-            // le app (come lo Start o il Launchpad)
-            Rectangle {
-                width: 28; height: 28; radius: 14
-                anchors.verticalCenter: parent.verticalCenter
-                color: areaApp.containsMouse || Stato.avvio ? Tema.cartaSopra : "transparent"
-                Behavior on color { ColorAnimation { duration: Tema.veloce } }
-                Icona { anchors.centerIn: parent; nome: "apps"; dimensione: 19 }
-                MouseArea {
-                    id: areaApp
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: Stato.alterna("avvio")
-                }
-            }
-
-            // le scrivanie: un pallino per ognuna, quella attiva e' piu' lunga
-            Row {
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 5
-                Repeater {
-                    model: ScriptModel {
-                        values: {
-                            const l = Hyprland.workspaces.values.filter(w => w.id > 0);
-                            return l.length > 0 ? l : [];
-                        }
-                    }
-                    delegate: Rectangle {
-                        required property var modelData
-                        readonly property bool attiva: modelData.focused || modelData.active
-                        anchors.verticalCenter: parent.verticalCenter
-                        height: 8
-                        width: attiva ? 26 : 8
-                        radius: 4
-                        color: attiva ? Tema.accento : (modelData.toplevels.values.length > 0 ? Tema.testo2 : Tema.testo3)
-                        Behavior on width { NumberAnimation { duration: Tema.media; easing.type: Easing.OutBack; easing.overshoot: 1.4 } }
-                        Behavior on color { ColorAnimation { duration: Tema.media } }
-                        MouseArea {
-                            anchors.fill: parent
-                            anchors.margins: -5
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: parent.modelData.activate()
-                        }
-                    }
-                }
-            }
-
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                visible: text !== ""
-                width: Math.min(implicitWidth, 320)
-                elide: Text.ElideRight
-                text: Hyprland.activeToplevel ? Hyprland.activeToplevel.title : ""
-                font.family: Tema.carattere
-                font.pixelSize: 13
-                font.weight: Font.Medium
-                color: Tema.testo2
-                rightPadding: 6
-            }
-        }
-    }
 
     // ---------------------------------------------------------------- al centro
     Rectangle {
@@ -14228,6 +14202,8 @@ Scope {
             if (codice === 0) {
                 blocco.tentativi = 0;
                 Stato.bloccato = false;
+                // all'accesso: da adesso i tasti di Hyprland funzionano (vedi vetro.conf)
+                Quickshell.execDetached(["sh", "-c", "touch \"${XDG_RUNTIME_DIR:-/tmp}/vetro-sbloccato\"; hyprctl dispatch submap reset"]);
             } else {
                 blocco.tentativi++;
                 blocco.errore = codice === 1 ? "Password sbagliata" : "Non riesco a controllare la password";
@@ -14413,6 +14389,18 @@ Scope {
                         TastoBlocco { icona: "restart_alt"; onCliccato: Quickshell.execDetached(["sudo", "-n", "/usr/bin/systemctl", "reboot"]) }
                         TastoBlocco { icona: "arrow_forward"; onCliccato: blocco.verifica(password.text) }
                     }
+                }
+
+                // all'accesso: come entrare con un altro utente
+                Text {
+                    visible: Quickshell.env("VETRO_ACCESSO") === "1"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 24
+                    text: "Altro utente (anche fantasma): Ctrl+Alt+F2"
+                    font.family: Tema.mono
+                    font.pixelSize: 12
+                    color: Qt.rgba(1, 1, 1, 0.5)
                 }
 
                 // in basso: notifiche e un po' di numeri
@@ -18051,7 +18039,9 @@ Singleton {
     property bool avvio: false           // cerca le app
     property bool impostazioni: false    // finestra delle Impostazioni
     property string pagina: "generale"
-    property bool bloccato: false        // blocco schermo
+    // blocco schermo. All'accesso (avvio senza la schermata a testo) si parte bloccati:
+    // la password si scrive qui (lo decide avvia-pannelli con VETRO_BLOCCA_ALL_AVVIO)
+    property bool bloccato: Quickshell.env("VETRO_BLOCCA_ALL_AVVIO") === "1"
     property bool restaSveglio: false    // lo schermo non si spegne e non si blocca
     // le barre in alto (una per schermo): restano cliccabili quando un pannello e' aperto
     property var barre: []
@@ -18484,7 +18474,42 @@ if [ ! -f "$casa/.config/sfondo.conf" ]; then
 fi
 # il desktop di partenza per tutti (chi non ha scelto): Vetro
 echo vetro > /etc/vetro/desktop-predefinito
-echo "[OK] All'accesso parte il desktop Vetro (o il classico, se manca il 3D)"
+
+# --- niente schermata a testo: all'accensione compare la schermata di blocco -------
+# Sul primo terminale l'utente entra da solo e il desktop parte gia' bloccato (la
+# password si scrive nella schermata di blocco). Se il desktop si chiude si esce
+# sempre (mai un terminale aperto senza password) e ricompare il blocco. Gli altri
+# utenti (anche fantasma) entrano da Ctrl+Alt+F2. Per tornare alla schermata a testo:
+#   sudo rm /etc/vetro/accesso-grafico /etc/systemd/system/getty@tty1.service.d/vetro-accesso.conf
+echo "$MIA_UTENTE" > /etc/vetro/accesso-grafico
+install -vdm755 /etc/systemd/system/getty@tty1.service.d
+cat > /etc/systemd/system/getty@tty1.service.d/vetro-accesso.conf << EOF
+# Creato da lfs.sh (Fase 10): $MIA_UTENTE entra da solo, poi la schermata di blocco
+[Service]
+ExecStart=
+ExecStart=-/usr/sbin/agetty -o '-p -f -- \\\\u' --noclear --autologin $MIA_UTENTE %I \$TERM
+EOF
+# .bash_profile: se il desktop si chiude con un errore si esce lo stesso (con l'accesso
+# automatico restare nel terminale vorrebbe dire restare dentro senza password)
+p="$casa/.bash_profile"
+if ! grep -q 'accesso-grafico' "$p"; then
+  sed -i '/echo "Per riprovare scrivi:  avvia-desktop"/a\    if [ -e /etc/vetro/accesso-grafico ]; then sleep 8; exit 1; fi' "$p"
+  grep -q 'accesso-grafico' "$p" || { echo "Non riesco a cambiare $p"; return 1; }
+  bash -n "$p"
+fi
+# l'utente fantasma entra da Ctrl+Alt+F2: anche li' parte il suo desktop
+p=/usr/local/share/fantasma/casa/.bash_profile
+if [ -f "$p" ] && ! grep -q 'tty2' "$p"; then
+  sed -i 's|^if \[ "\$(tty)" = /dev/tty1 \] && \[ -z "\${WAYLAND_DISPLAY:-}" \]; then$|if { [ "$(tty)" = /dev/tty1 ] \|\| [ "$(tty)" = /dev/tty2 ]; } \&\& [ -z "${WAYLAND_DISPLAY:-}" ]; then|' "$p"
+  grep -q 'tty2' "$p" || { echo "Non riesco a cambiare $p"; return 1; }
+  bash -n "$p"
+fi
+# desktop classico (labwc): all'accesso parte bloccato (swaylock) prima della barra
+if [ -f /etc/xdg/labwc/autostart ] && ! grep -q 'VETRO_BLOCCA_ALL_AVVIO' /etc/xdg/labwc/autostart; then
+  sed -i '1a [ "${VETRO_BLOCCA_ALL_AVVIO:-}" = 1 ] \&\& /usr/local/bin/blocca-schermo >/dev/null 2>\&1' /etc/xdg/labwc/autostart
+  grep -q 'VETRO_BLOCCA_ALL_AVVIO' /etc/xdg/labwc/autostart || { echo "Non riesco a cambiare l'avvio del desktop classico"; return 1; }
+fi
+echo "[OK] All'accensione la schermata di blocco, poi il desktop Vetro (o il classico, se manca il 3D)"
 }
 
 f10_thunar_icone() {
@@ -18530,7 +18555,29 @@ grep -q 'Non riesco a spegnere la modalit' /usr/local/bin/fantasma \
   || { echo "Non riesco a correggere /usr/local/bin/fantasma"; return 1; }
 bash -n /usr/local/bin/fantasma
 fi
-echo "[OK] Correzioni ai programmi delle fasi prima"
+# - modalita' fantasma accesa di serie: il suo programma impara "prepara" (scrive solo i
+#   file, il resto lo fa l'avvio della distro). Si accende una volta sola: se poi la
+#   spegni tu, resta spenta
+if [ -f /usr/local/sbin/fantasma-aiuto ]; then
+python3 -I - /usr/local/sbin/fantasma-aiuto << "EOF"
+import sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+if "def prepara():" not in s:
+    for vecchio, nuovo in (('AZIONI = {"accendi": accendi, "spegni": spegni, "avvio": avvio, "attendi": attendi,\n          "stato": lambda: print("acceso" if acceso() else "spento") or True,\n          "pronto": lambda: acceso() and avanzamento() >= 100}', 'def prepara():\n    """Accesa di serie: scrive solo i file della modalita\' (si usa quando si costruisce\n    la distro). Firewall, Tor, nome del computer e scheda di rete li sistema l\'avvio\n    della distro quando la trova accesa. Niente comandi sulla rete: dentro il chroot\n    toccherebbero il PC che costruisce la distro."""\n    os.makedirs(CARTELLA, exist_ok=True)\n    scrivi_torrc()\n    for p, t in {**FILE, **file_rete(), **file_link()}.items():\n        scrivi(p, t)\n    open(STATO, "w").close()\n    comando("systemctl", "enable", "tor-fantasma.service")\n    print("Modalita\' fantasma accesa (vale dal prossimo avvio)")\n    return True\n\n' + 'AZIONI = {"accendi": accendi, "spegni": spegni, "avvio": avvio, "attendi": attendi,\n          "prepara": prepara,\n          "stato": lambda: print("acceso" if acceso() else "spento") or True,\n          "pronto": lambda: acceso() and avanzamento() >= 100}'), ('        sys.exit("Uso: fantasma-aiuto accendi|spegni|stato|pronto|attendi|avvio")', '        sys.exit("Uso: fantasma-aiuto accendi|spegni|stato|pronto|attendi|avvio|prepara")'), ("#   fantasma-aiuto stato | pronto | attendi | avvio (all'accensione del computer)", "#   fantasma-aiuto stato | pronto | attendi | avvio (all'accensione del computer)\n#   fantasma-aiuto prepara   accesa di serie: scrive solo i file (vale dal prossimo avvio)")):
+        if vecchio not in s:
+            sys.exit("fantasma-aiuto: non trovo il punto da cambiare")
+        s = s.replace(vecchio, nuovo, 1)
+    open(p, "w", encoding="utf-8").write(s)
+    print("modalita' fantasma: aggiunta l'azione prepara")
+EOF
+python3 -I -c 'import ast, sys; ast.parse(open(sys.argv[1]).read())' /usr/local/sbin/fantasma-aiuto
+  if [ ! -e /etc/fantasma/predefinita ]; then
+    [ -e /etc/fantasma/attivo ] || /usr/local/sbin/fantasma-aiuto prepara
+    touch /etc/fantasma/predefinita
+  fi
+fi
+echo "[OK] Correzioni ai programmi delle fasi prima (modalita' fantasma accesa di serie)"
 }
 
 f10_barre() {
@@ -18660,6 +18707,8 @@ cmd_fase10() {
   done
   titolo "FASE 10 COMPLETATA"
   info "Accendi la distro (sudo $0 avvia): ora parte con l'accelerazione 3D e il desktop Vetro."
+  info "   All'accensione: schermata di blocco, scrivi la password e premi Invio."
+  info "   Altri utenti (anche fantasma): Ctrl+Alt+F2. Modalita' fantasma accesa di serie."
   info "   Tasto Windows: cerca le app      Windows+A: centro di controllo"
   info "   Windows+D (o clic sull'ora): cruscotto con meteo, calendario e prestazioni"
   info "   Windows+I: Impostazioni          Windows+L: blocco schermo"
