@@ -23,6 +23,8 @@ test_impronta_cambiata() {
 test_ripresa_dopo_errore() {
     radice_finta
     export VETRO_EUID=0
+    printf '#[multilib]\n#Include = /etc/pacman.d/mirrorlist\n' > "$RADICE/etc/pacman.conf"
+    finto pacman
     uno() { echo 1 >> "$RADICE/fatti"; }
     due() { [ -e "$RADICE/corretto" ] || return 1; echo 2 >> "$RADICE/fatti"; }
     tre() { echo 3 >> "$RADICE/fatti"; }
