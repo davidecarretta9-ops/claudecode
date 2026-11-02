@@ -19,6 +19,17 @@ test_conf_hyprland() {
     non_contiene "$F/etc/xdg/hypr/vetro.conf" "vetro-accesso"
     contiene "$F/etc/xdg/hypr/vetro.conf" "env = XCURSOR_THEME, Vetro"
     contiene "$F/etc/xdg/hypr/vetro.conf" "source = ~/.config/hypr/vetro-schermo.conf"
+    # finestre chiare come nel video: angoli 18, niente bordo colorato
+    contiene "$F/etc/xdg/hypr/vetro.conf" "rounding = 18"
+    contiene "$F/etc/xdg/hypr/vetro.conf" "border_size = 0"
+    # le impostazioni di partenza (copiate nella casa al primo accesso) dicono lo stesso
+    contiene "$F/etc/xdg/hypr/vetro-impostazioni.conf" "rounding = 18"
+    # barre del titolo chiare, titolo DM Sans, tasti senza cerchio con simboli scuri
+    contiene "$BARRE" "bar_color = rgba(f6f8fbff)"
+    contiene "$BARRE" "col.text = rgba(15181dff)"
+    contiene "$BARRE" "bar_text_font = DM Sans"
+    contiene "$BARRE" "hyprbars-button = rgba(00000000), 22, ■,"
+    contiene "$BARRE" "inactive_button_color = rgba(00000000)"
 }
 
 test_barre_versione() {

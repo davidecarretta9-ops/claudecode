@@ -51,7 +51,8 @@ make -C "$t/hyprland-plugins-$commit/hyprbars" all >"$t/make.log" 2>&1 \
     || { tail -n 20 "$t/make.log" >&2; senza_barre "il plugin non si compila"; }
 install -Dm755 "$t/hyprland-plugins-$commit/hyprbars/hyprbars.so" "$PLUGIN"
 cat > "$CONF" << "FINE"
-# Barre del titolo delle finestre (creato da vetro-arch.sh): plugin hyprbars, come GNOME.
+# Barre del titolo delle finestre (creato da vetro-arch.sh): plugin hyprbars, chiare
+# con il titolo al centro e i tasti scuri a destra.
 # Trascina la barra per spostare la finestra, doppio clic per ingrandirla.
 # Pulsanti a destra: chiudi, ingrandisci, riduci.
 # Per toglierle: in ~/.config/hypr/personale.conf scrivi  plugin:hyprbars:enabled = false
@@ -60,21 +61,22 @@ plugin = /usr/lib/hyprland-plugins/hyprbars.so
 plugin {
     hyprbars {
         bar_height = 34
-        bar_color = rgba(303030ff)
-        col.text = rgba(ffffffde)
-        bar_text_size = 11
+        bar_color = rgba(f6f8fbff)
+        col.text = rgba(15181dff)
+        bar_text_font = DM Sans
+        bar_text_size = 12
         bar_text_align = center
         bar_part_of_window = true
         bar_precedence_over_border = true
         bar_buttons_alignment = right
         bar_padding = 10
         bar_button_padding = 8
-        inactive_button_color = rgba(ffffff14)
+        inactive_button_color = rgba(00000000)
         on_double_click = hyprctl dispatch fullscreen 1
         # colore, misura, simbolo, comando, colore del simbolo (il primo e' il piu' a destra)
-        hyprbars-button = rgba(ffffff26), 22, ✕, hyprctl dispatch killactive, rgba(ffffffde)
-        hyprbars-button = rgba(ffffff26), 22, □, hyprctl dispatch fullscreen 1, rgba(ffffffde)
-        hyprbars-button = rgba(ffffff26), 22, –, hyprctl dispatch global quickshell:riduci, rgba(ffffffde)
+        hyprbars-button = rgba(00000000), 22, ✕, hyprctl dispatch killactive, rgba(15181dff)
+        hyprbars-button = rgba(00000000), 22, ■, hyprctl dispatch fullscreen 1, rgba(15181dff)
+        hyprbars-button = rgba(00000000), 22, –, hyprctl dispatch global quickshell:riduci, rgba(15181dff)
     }
 }
 FINE
