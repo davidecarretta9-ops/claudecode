@@ -1,0 +1,16 @@
+[Unit]
+Description=Guardiano della rete (chiede prima di lasciar uscire un programma)
+After=firewall.service
+Wants=firewall.service
+
+[Service]
+ExecStart=/usr/local/sbin/guardiano-rete
+Restart=always
+RestartSec=1
+NoNewPrivileges=yes
+ProtectSystem=full
+ReadWritePaths=/etc/guardiano-rete
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

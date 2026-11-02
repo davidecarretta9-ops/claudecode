@@ -1,0 +1,3 @@
+# Creato da lfs.sh: chi e' nel gruppo wheel accende e spegne la modalita' fantasma
+# senza password (solo questo comando)
+%wheel ALL=(root) NOPASSWD: /usr/local/sbin/fantasma-aiuto

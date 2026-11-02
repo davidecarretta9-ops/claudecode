@@ -1,0 +1,72 @@
+#!/bin/bash
+# VPN (creato da lfs.sh): accendi, spegni o configura la VPN WireGuard.
+#   vpn             finestra con lo stato e i pulsanti
+#   vpn configura   scegli il file .conf della tua VPN e accendila
+AIUTO=/usr/local/sbin/vpn-aiuto
+finestra() { yad --title "VPN" --window-icon network-vpn --center --fixed --width 480 "$@"; }
+
+accendi() {
+  local msg
+  if msg=$(sudo -n "$AIUTO" accendi 2>&1); then
+    finestra --image network-vpn --button OK:0 --text "<b>VPN accesa.</b>
+
+Ora i siti vedono l'indirizzo IP della VPN, non il tuo.
+Resta accesa anche dopo un riavvio. Se la VPN si interrompe, i tuoi programmi
+restano senza internet (cosi' il tuo vero indirizzo non si vede mai).
+
+Per spegnerla: menu Applicazioni -> <b>VPN</b>."
+  else
+    finestra --image dialog-error --button OK:0 --text "<b>La VPN non si accende.</b>
+
+Controlla di essere collegato a internet e che il file della VPN sia ancora valido
+(l'abbonamento e' attivo?). Internet funziona normalmente, senza VPN.
+
+<small>$(printf '%s' "$msg" | tail -n 3 | sed 's/&/\&amp;/g; s/</\&lt;/g')</small>"
+    return 1
+  fi
+}
+
+configura() {
+  local file msg
+  file=$(finestra --file --width 760 --height 520 \
+           --text "Scegli il file di configurazione <b>WireGuard</b> della tua VPN (finisce con <b>.conf</b>)." \
+           --file-filter "File WireGuard (.conf) | *.conf" --file-filter "Tutti i file | *") || return 1
+  [ -f "$file" ] || return 1
+  if ! msg=$(sudo -n "$AIUTO" importa < "$file" 2>&1); then
+    finestra --image dialog-error --button OK:0 --text "<b>Questo file non va bene.</b>
+
+$(printf '%s' "$msg" | sed 's/&/\&amp;/g; s/</\&lt;/g')
+
+Serve il file di configurazione WireGuard che ti da' la tua VPN."
+    return 1
+  fi
+  accendi
+}
+
+if [ "${1:-}" = configura ]; then configura; exit; fi
+
+stato=$(sudo -n "$AIUTO" stato 2>/dev/null) || stato="non configurata"
+case "$stato" in
+  accesa)
+    finestra --image network-vpn --text "<b>La VPN e' accesa.</b>  Il tuo indirizzo IP e' nascosto." \
+             --button "Cambia file:2" --button "Spegnila:3" --button "Chiudi:0"
+    case $? in
+      3) sudo -n "$AIUTO" spegni >/dev/null 2>&1
+         finestra --image dialog-warning --button OK:0 \
+                  --text "<b>VPN spenta.</b>  Ora i siti vedono il tuo vero indirizzo IP." ;;
+      2) configura ;;
+    esac ;;
+  spenta)
+    finestra --image dialog-warning --text "<b>La VPN e' spenta.</b>  I siti vedono il tuo vero indirizzo IP." \
+             --button "Cambia file:2" --button "Chiudi:1" --button "Accendila:0"
+    case $? in
+      0) accendi ;;
+      2) configura ;;
+    esac ;;
+  *)
+    finestra --image network-vpn --button "Annulla:1" --button "Scegli il file:0" --text "<b>La VPN non e' ancora configurata.</b>
+
+Ti serve il file di configurazione WireGuard (.conf) della tua VPN.
+Con Mullvad: sul sito, nel tuo account, <i>WireGuard configuration</i> -> scarica il file." \
+      && configura ;;
+esac

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Cassaforte
+Comment=La cartella cifrata: si apre con la tua password
+Exec=/usr/local/bin/cassaforte
+Icon=changes-prevent
+Terminal=false
+Categories=Utility;Security;

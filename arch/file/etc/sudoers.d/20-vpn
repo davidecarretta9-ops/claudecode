@@ -1,0 +1,3 @@
+# Creato da lfs.sh: chi e' nel gruppo wheel accende e spegne la VPN senza password
+# (solo questo comando, che accetta solo file WireGuard controllati)
+%wheel ALL=(root) NOPASSWD: /usr/local/sbin/vpn-aiuto

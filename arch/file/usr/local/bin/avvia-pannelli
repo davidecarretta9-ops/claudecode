@@ -1,0 +1,75 @@
+#!/bin/bash
+# La grafica del desktop Vetro (creato da lfs.sh, Fase 10): Quickshell con i pannelli
+# in /etc/xdg/quickshell/vetro. Se si chiude per un errore riparte; se non riesce a
+# partire (o parte ma i pannelli non si caricano), al loro posto si aprono barra,
+# notifiche e sfondo del desktop classico, cosi' il desktop resta usabile.
+# Il motivo e' in ~/.cache/quickshell-vetro.log
+export PATH="/usr/local/bin:$PATH"
+export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
+export QT_QPA_PLATFORM=wayland
+PANNELLI=/etc/xdg/quickshell/vetro
+registro="$HOME/.cache/quickshell-vetro.log"
+mkdir -p "$HOME/.cache"
+
+riserva() {
+    echo "--- $(date '+%F %T') i pannelli non partono: uso quelli di riserva" >> "$registro"
+    # all'accesso senza pannelli: blocca con swaylock e aspetta la password
+    if [ "${VETRO_BLOCCA_ALL_AVVIO:-}" = 1 ]; then
+        /usr/local/bin/blocca-schermo --attendi
+        touch "${XDG_RUNTIME_DIR:-/tmp}/vetro-sbloccato"
+        hyprctl dispatch submap reset >/dev/null 2>&1
+    fi
+    notify-send -u critical "Desktop Vetro" "I pannelli non partono: uso quelli di riserva. Il motivo e' in ~/.cache/quickshell-vetro.log" 2>/dev/null &
+    /usr/local/bin/sfondo-desktop --swaybg >/dev/null 2>&1 &
+    mako --font "Adwaita Sans 11" --background-color "#202022e6" --text-color "#ffffff" \
+         --border-size 0 --border-radius 14 --padding 14 --default-timeout 6000 >/dev/null 2>&1 &
+    [ -x /usr/local/bin/blocca-schermo ] && swayidle -w timeout 600 /usr/local/bin/blocca-schermo >/dev/null 2>&1 &
+    exec xfce4-panel >/dev/null 2>&1
+}
+
+# i pannelli sono caricati? (rispondono solo se tutti i file si sono caricati bene)
+risponde() {
+    [ "$(qs -p "$PANNELLI" ipc call vetro ping 2>/dev/null)" = ok ]
+}
+
+errori_rapidi=0
+while :; do
+    # all'accesso i pannelli partono bloccati, finche' non scrivi la password (anche se
+    # ripartono dopo un errore prima che tu l'abbia scritta)
+    if [ "${VETRO_ACCESSO:-}" = 1 ] && [ ! -e "${XDG_RUNTIME_DIR:-/tmp}/vetro-sbloccato" ]; then
+        export VETRO_BLOCCA_ALL_AVVIO=1
+    else
+        unset VETRO_BLOCCA_ALL_AVVIO
+    fi
+    inizio=$SECONDS
+    echo "--- $(date '+%F %T') avvio" >> "$registro"
+    quickshell -p "$PANNELLI" >> "$registro" 2>&1 &
+    pid=$!
+    caricati=0
+    for _ in $(seq 1 20); do
+        sleep 1
+        kill -0 "$pid" 2>/dev/null || break
+        if risponde; then caricati=1; break; fi
+    done
+    if [ "$caricati" = 1 ]; then
+        wait "$pid"
+        esito=$?
+    else
+        echo "--- $(date '+%F %T') i pannelli non rispondono" >> "$registro"
+        kill "$pid" 2>/dev/null
+        wait "$pid" 2>/dev/null
+        esito=1
+    fi
+    # chiusa con "Esci" da Hyprland: Hyprland non c'e' piu', si esce anche qui
+    pgrep -x Hyprland >/dev/null || exit 0
+    if [ "$caricati" = 0 ]; then
+        errori_rapidi=$(( errori_rapidi + 2 ))     # non si caricano: si riprova una volta sola
+    elif [ $(( SECONDS - inizio )) -lt 15 ]; then
+        errori_rapidi=$(( errori_rapidi + 1 ))
+    else
+        errori_rapidi=0
+    fi
+    echo "--- $(date '+%F %T') chiusa (codice $esito)" >> "$registro"
+    [ "$errori_rapidi" -ge 3 ] && riserva
+    sleep 1
+done

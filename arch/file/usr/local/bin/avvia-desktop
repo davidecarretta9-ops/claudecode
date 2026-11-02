@@ -1,0 +1,70 @@
+#!/bin/bash
+# Avvia il desktop dopo l'accesso dal primo terminale (creato da lfs.sh, Fase 10).
+#   Vetro    = Hyprland + Quickshell (animazioni, sfocatura), se c'e' l'accelerazione 3D
+#   classico = labwc con la barra di Xfce (quello di prima)
+# La scelta e' in ~/.config/desktop-scelto (si cambia con "scegli-desktop").
+# Se il Vetro si chiude con un errore entro pochi secondi, parte da solo il classico.
+# Esce con 0 se hai chiuso la sessione tu ("Esci"), con 1 se c'e' stato un errore.
+export PATH="/usr/local/bin:$PATH"
+CONF="${XDG_CONFIG_HOME:-$HOME/.config}"
+mkdir -p "$CONF" "$HOME/.cache"
+
+scelta=$(cat "$CONF/desktop-scelto" 2>/dev/null)
+[ -n "$scelta" ] || scelta=$(cat /etc/vetro/desktop-predefinito 2>/dev/null)
+[ -n "$scelta" ] || scelta=vetro
+
+# accesso dalla schermata di blocco (sul primo terminale l'utente entra da solo, vedi
+# /etc/vetro/accesso-grafico): il desktop parte bloccato, la password si scrive li'
+if [ -e /etc/vetro/accesso-grafico ] && [ "$(tty)" = /dev/tty1 ]; then
+    export VETRO_ACCESSO=1
+    rm -f "${XDG_RUNTIME_DIR:-/tmp}/vetro-sbloccato"
+fi
+
+classico() {
+    export WLR_RENDERER=pixman
+    # all'accesso anche il desktop classico parte bloccato (swaylock, vedi autostart)
+    [ "${VETRO_ACCESSO:-}" = 1 ] && export VETRO_BLOCCA_ALL_AVVIO=1
+    dbus-run-session labwc > "$HOME/.labwc.log" 2>&1
+}
+
+tre_d=no
+[ -f /run/vetro/grafica-3d ] && tre_d=$(cat /run/vetro/grafica-3d)
+[ -e /etc/vetro/forza-3d ] && tre_d=si
+
+if [ "$scelta" = vetro ] && command -v Hyprland >/dev/null && command -v quickshell >/dev/null; then
+    if [ "$tre_d" != si ]; then
+        echo "Il desktop Vetro ha bisogno dell'accelerazione 3D, che qui non c'e':"
+        echo "parte il desktop classico. (Nella macchina virtuale: sudo lfs.sh avvia)"
+        sleep 3
+        classico
+        exit $?
+    fi
+    mkdir -p "$CONF/hypr" "$CONF/vetro"
+    [ -f "$CONF/hypr/personale.conf" ] || printf '# Le tue modifiche a Hyprland (le legge per ultime)\n' > "$CONF/hypr/personale.conf"
+    [ -f "$CONF/hypr/vetro-impostazioni.conf" ] || cp /etc/xdg/hypr/vetro-impostazioni.conf "$CONF/hypr/vetro-impostazioni.conf"
+    # risoluzione di partenza: nelle macchine virtuali 1920x1080. All'accensione QEMU
+    # propone spesso 800x600 (la sua finestra non ha ancora detto quanto e' grande) e
+    # con l'accesso automatico Hyprland parte proprio in quel momento. Se la scegli tu
+    # in Impostazioni -> Schermo vale la tua (e' scritta dopo, in vetro-impostazioni.conf)
+    if systemd-detect-virt -q 2>/dev/null; then
+        echo "monitor = , 1920x1080, auto, 1" > "$CONF/hypr/vetro-schermo.conf"
+    else
+        echo "# su un PC vero: la risoluzione migliore dello schermo (vetro.conf)" > "$CONF/hypr/vetro-schermo.conf"
+    fi
+    unset WLR_RENDERER WLR_NO_HARDWARE_CURSORS
+    # il registro della volta prima resta (se Hyprland si e' bloccato, il motivo e' li')
+    [ -f "$HOME/.cache/hyprland.log" ] && mv -f "$HOME/.cache/hyprland.log" "$HOME/.cache/hyprland-prima.log"
+    inizio=$SECONDS
+    dbus-run-session Hyprland -c /etc/xdg/hypr/vetro.conf > "$HOME/.cache/hyprland.log" 2>&1
+    esito=$?
+    [ "$esito" -eq 0 ] && exit 0
+    if [ $(( SECONDS - inizio )) -lt 30 ]; then
+        echo "Il desktop Vetro non e' partito (registro: ~/.cache/hyprland.log)."
+        echo "Parte il desktop classico."
+        sleep 3
+        classico
+        exit $?
+    fi
+    exit 1
+fi
+classico

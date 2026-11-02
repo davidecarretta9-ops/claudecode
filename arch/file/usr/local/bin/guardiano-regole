@@ -1,0 +1,61 @@
+#!/usr/bin/python3 -I
+# Regole della rete (creato da lfs.sh): i programmi che hai permesso o bloccato
+# "per sempre". Eliminando una regola, la prossima volta il guardiano chiede di nuovo.
+import json, os, socket, subprocess, sys
+
+PRESA = os.environ.get("GUARDIANO_PRESA", "/run/guardiano-rete.sock")
+TITOLO = "Regole della rete"
+SEP = "\x1e"
+
+def parla(messaggio):
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.connect(PRESA)
+    s.sendall((json.dumps(messaggio) + "\n").encode())
+    risposta = s.makefile("rb").readline()
+    s.close()
+    return json.loads(risposta)
+
+def finestra(*argomenti):
+    return subprocess.run(["yad", "--title", TITOLO, "--window-icon", "security-high", "--center"] + list(argomenti),
+                          stdout=subprocess.PIPE, text=True)
+
+def nome_leggibile(chiave):
+    if chiave.startswith("wine:"):
+        return chiave[5:] + "  (Windows)"
+    if chiave.startswith("sconosciuto:"):
+        return "programma sconosciuto"
+    return chiave
+
+def principale():
+    while True:
+        try:
+            regole = parla({"comando": "regole"})["regole"]
+        except (OSError, ValueError, KeyError):
+            finestra("--image", "dialog-error", "--text", "Il guardiano della rete non risponde.",
+                     "--button", "OK:0", "--fixed", "--width", "380")
+            sys.exit(1)
+        if not regole:
+            finestra("--image", "security-high", "--fixed", "--width", "420", "--button", "OK:0",
+                     "--text", "<b>Nessuna regola salvata.</b>\n\nQuando un programma vuole collegarsi "
+                               "a internet, ti viene chiesto se permetterlo.")
+            return
+        righe = []
+        for chiave, scelta in regole:
+            righe += ["Permesso" if scelta == "permetti" else "Bloccato", nome_leggibile(chiave), chiave]
+        r = finestra("--list", "--width", "760", "--height", "420", "--image", "security-high",
+                     "--text", "Programmi che hai permesso o bloccato per sempre.\n"
+                               "Scegline uno e premi <b>Elimina</b>: la prossima volta ti verra' chiesto di nuovo.",
+                     "--column", "Scelta", "--column", "Programma", "--column", "chiave:HD",
+                     "--print-column", "3", "--separator", SEP,
+                     "--button", "Chiudi:1", "--button", "Elimina la regola:0", *righe)
+        if r.returncode != 0:
+            return
+        chiave = r.stdout.rstrip("\n").rstrip(SEP)
+        if chiave:
+            try:
+                parla({"comando": "elimina", "chiave": chiave})
+            except (OSError, ValueError):
+                pass
+
+if __name__ == "__main__":
+    principale()

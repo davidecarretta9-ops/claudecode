@@ -1,0 +1,5 @@
+#!/bin/sh
+# Apre il browser (creato da lfs.sh, Fase 10): Tor Browser, l'unico browser
+if [ -x /usr/local/bin/tor-browser ]; then exec /usr/local/bin/tor-browser "$@"; fi
+notify-send -u critical "Browser" "Tor Browser non c'e'" 2>/dev/null
+exit 1

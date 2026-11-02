@@ -1,0 +1,44 @@
+#!/bin/bash
+# Benvenuto (creato da lfs.sh): al primo accesso propone la VPN per nascondere l'indirizzo IP.
+#   Hai gia' una VPN?  si' -> scegli il file e si accende
+#                      no  -> ti consigliamo Mullvad (oppure continui senza VPN)
+SEGNO="$HOME/.config/benvenuto-fatto"
+[ -e "$SEGNO" ] && exit 0
+mkdir -p "$HOME/.config"
+sleep 4                                   # il desktop finisce di partire
+NOME=$( . /etc/os-release 2>/dev/null; echo "${NAME:-la tua distro}" )
+finestra() { yad --title "Benvenuto" --window-icon security-high --center --fixed --width 540 "$@"; }
+
+finestra --image security-high --button "No:1" --button "Si', ce l'ho:0" --text "<big><b>Benvenuto in $NOME!</b></big>
+
+Per nascondere il tuo <b>indirizzo IP</b> (cioe' da dove ti colleghi) puoi usare una <b>VPN</b>.
+Per navigare senza farti riconoscere c'e' gia' <b>Tor Browser</b>, il browser predefinito.
+
+Hai gia' un abbonamento a una VPN che usa <b>WireGuard</b>?"
+risposta=$?
+touch "$SEGNO"
+case $risposta in
+  0)
+    /usr/local/bin/vpn configura ;;
+  1)
+    finestra --image network-vpn --button "No, continua senza VPN:1" --button "Apri il sito di Mullvad:0" --text "<b>Ti consigliamo Mullvad VPN</b>
+
+  - circa 5 euro al mese, senza contratto
+  - non chiede email, nome o numero di telefono
+  - non tiene registri di cosa fai su internet
+  - funziona con WireGuard, gia' pronto in questo sistema
+
+Vuoi aprire il sito di Mullvad?"
+    if [ $? -eq 0 ]; then
+      xdg-open "https://mullvad.net/it/account/create" >/dev/null 2>&1 &
+      finestra --image dialog-information --button OK:0 --text "<b>Come fare</b>
+
+1. Sul sito crea l'account (ti da' un numero: <b>conservalo</b>) e paga.
+2. Nel tuo account apri <i>WireGuard configuration</i>, premi <i>Generate key</i>,
+   scegli il Paese e scarica il file <b>.conf</b>.
+3. Apri il menu Applicazioni -> <b>VPN</b> e scegli quel file.
+
+Puoi farlo anche piu' tardi: intanto continui senza VPN."
+    fi ;;
+esac
+exit 0

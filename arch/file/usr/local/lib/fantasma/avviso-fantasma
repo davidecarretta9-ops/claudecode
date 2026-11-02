@@ -1,0 +1,31 @@
+#!/bin/sh
+# Creato da lfs.sh: in modalita' fantasma, prima di aprire Firefox o Thunderbird avvisa
+# che possono farti riconoscere (account, cookie, impronta del programma).
+# Si usa come /usr/local/bin/firefox e /usr/local/bin/thunderbird.
+nome=$(basename "$0")
+vero="/usr/bin/$nome"
+if [ -e /etc/fantasma/attivo ]; then
+  case "$nome" in
+    firefox)
+      yad --title "Modalità fantasma" --window-icon fantasma --image dialog-warning --center --fixed --width 500 \
+          --text "<b>Sei in modalità fantasma.</b>
+
+Firefox passa da Tor, ma i siti possono riconoscerti lo stesso
+(cookie, account, impronta del browser). Per non farti riconoscere
+usa <b>Tor Browser</b>." \
+          --button "Annulla:1" --button "Apri Tor Browser:2" --button "Apri Firefox lo stesso:0"
+      case $? in
+        0) ;;
+        2) exec /usr/local/bin/tor-browser "$@" ;;
+        *) exit 0 ;;
+      esac ;;
+    *)
+      yad --title "Modalità fantasma" --window-icon fantasma --image dialog-warning --center --fixed --width 500 \
+          --text "<b>Sei in modalità fantasma.</b>
+
+La posta passa da Tor, ma entrando nel tuo account di posta
+chi gestisce la posta sa che sei tu." \
+          --button "Annulla:1" --button "Apri lo stesso:0" || exit 0 ;;
+  esac
+fi
+exec "$vero" "$@"

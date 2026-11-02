@@ -1,0 +1,13 @@
+[Unit]
+Description=VPN WireGuard (lfs.sh)
+After=network-online.target firewall.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/vpn-aiuto su
+ExecStop=/usr/local/sbin/vpn-aiuto giu
+
+[Install]
+WantedBy=multi-user.target

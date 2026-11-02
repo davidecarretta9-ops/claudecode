@@ -1,0 +1,114 @@
+#!/usr/bin/python3 -I
+# Guardiano della rete - le domande sul desktop (creato da lfs.sh).
+# Parte da solo all'accesso. Quando un programma vuole collegarsi a internet per
+# la prima volta, mostra la finestra: Blocca / Permetti. Se non rispondi entro un
+# minuto, il collegamento resta bloccato (e la domanda torna tra 10 minuti).
+import ctypes, fcntl, json, os, socket, subprocess, sys, threading, time
+
+PRESA = os.environ.get("GUARDIANO_PRESA", "/run/guardiano-rete.sock")
+ATTESA = 60
+COMANDO_FINESTRA = os.environ.get("GUARDIANO_FINESTRA", "yad")    # per le prove
+
+SERVIZI = {80: "pagine web", 443: "pagine web sicure", 53: "nomi dei siti (DNS)",
+           853: "nomi dei siti (DNS cifrato)", 993: "posta in arrivo", 995: "posta in arrivo",
+           143: "posta in arrivo", 110: "posta in arrivo", 465: "invio posta", 587: "invio posta",
+           25: "invio posta", 22: "SSH", 123: "orologio (NTP)", 9001: "rete Tor", 51820: "VPN"}
+
+def non_ispezionabile():
+    """Gli altri programmi dell'utente non possono leggere o cambiare questa memoria."""
+    try:
+        ctypes.CDLL(None, use_errno=True).prctl(4, 0, 0, 0, 0)      # PR_SET_DUMPABLE = 0
+    except (OSError, AttributeError):
+        pass
+
+def un_solo_avvio():
+    cartella = os.environ.get("XDG_RUNTIME_DIR") or f"/tmp/guardiano-{os.getuid()}"
+    os.makedirs(cartella, mode=0o700, exist_ok=True)
+    f = open(os.path.join(cartella, "guardiano-avvisi.lock"), "w")
+    try:
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        sys.exit(0)                     # e' gia' attivo
+    return f
+
+def sicuro(t):
+    return str(t).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+def nome_del_sito(indirizzo, fuori):
+    try:
+        fuori.append(socket.gethostbyaddr(indirizzo)[0])
+    except (OSError, UnicodeError):
+        pass
+
+def notifica(testo):
+    try:
+        subprocess.Popen(["notify-send", "-a", "Guardiano della rete", "-i", "security-low",
+                          "Guardiano della rete", testo], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        pass
+
+def chiedi(d, conn, blocco):
+    sito = []
+    t = threading.Thread(target=nome_del_sito, args=(d.get("indirizzo", ""), sito), daemon=True)
+    t.start(); t.join(1.5)
+    porta = d.get("porta", 0)
+    servizio = SERVIZI.get(porta)
+    destinazione = sicuro(d.get("indirizzo", "?")) + (f"  ({sicuro(sito[0])})" if sito else "")
+    testo = (f"<b><big>{sicuro(d.get('nome', '?'))}</big></b> vuole collegarsi a internet.\n\n"
+             f"Programma:  {sicuro(d.get('programma', '?'))}\n"
+             f"Verso:  {destinazione}\n"
+             f"Porta:  {porta} {sicuro(d.get('protocollo', '')).upper()}"
+             + (f" ({servizio})" if servizio else "") +
+             "\n\nLo lasci collegare?")
+    comando = [COMANDO_FINESTRA, "--title", "Guardiano della rete", "--window-icon", "security-high",
+               "--image", "security-medium", "--text", testo,
+               "--button", "Blocca sempre:3", "--button", "Blocca:1",
+               "--button", "Permetti fino al riavvio:2", "--button", "Permetti sempre:0",
+               "--timeout", str(ATTESA), "--timeout-indicator", "bottom",
+               "--center", "--on-top", "--fixed", "--width", "560"]
+    try:
+        r = subprocess.run(comando, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode
+    except OSError:
+        r = 1
+    scelta = {0: "permetti_sempre", 2: "permetti_ora", 3: "blocca_sempre"}.get(r, "blocca_ora")
+    try:
+        with blocco:
+            conn.sendall((json.dumps({"risposta": d["domanda"], "scelta": scelta}) + "\n").encode())
+    except (OSError, KeyError):
+        pass
+
+def principale():
+    non_ispezionabile()
+    blocco_avvio = un_solo_avvio()
+    avvisato = False
+    time.sleep(2)                       # le notifiche partono insieme al desktop
+    while True:
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            s.connect(PRESA)
+            s.sendall(b'{"ciao": "avvisi"}\n')
+        except OSError:
+            s.close()
+            if not avvisato:
+                notifica("Il guardiano non e' attivo: per sicurezza i programmi non possono "
+                         "collegarsi a internet. Riavvia il computer.")
+                avvisato = True
+            time.sleep(5)
+            continue
+        avvisato = False
+        blocco = threading.Lock()
+        try:
+            for riga in s.makefile("rb"):
+                try:
+                    d = json.loads(riga)
+                except ValueError:
+                    continue
+                if "domanda" in d:
+                    threading.Thread(target=chiedi, args=(d, s, blocco), daemon=True).start()
+        except OSError:
+            pass
+        s.close()
+        time.sleep(1)
+
+if __name__ == "__main__":
+    principale()

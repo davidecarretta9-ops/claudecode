@@ -1,0 +1,2 @@
+# Creato da lfs.sh: l'utente fantasma accende la modalita' fantasma (non la spegne)
+fantasma ALL=(root) NOPASSWD: /usr/local/sbin/fantasma-aiuto accendi, /usr/local/sbin/fantasma-aiuto stato, /usr/local/sbin/fantasma-aiuto pronto, /usr/local/sbin/fantasma-aiuto attendi

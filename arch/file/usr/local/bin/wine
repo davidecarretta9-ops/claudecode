@@ -1,0 +1,508 @@
+#!/usr/bin/python3 -I
+# Programmi Windows nel recinto (creato da lfs.sh).
+# Questo comando prende il posto di "wine" (e di winecfg, regedit, msiexec...): i
+# programmi Windows girano in una zona chiusa (bubblewrap) dove vedono SOLO:
+#   - il loro disco C: (~/.wine), dove si installano
+#   - la cartella ~/Windows, che e' la cartella "utente" di Windows (Documenti,
+#     Desktop, Download...): li' metti i file da aprire con un programma Windows
+# Il resto della tua cartella home, le chiavette e gli altri programmi per loro non
+# esistono. Gli indirizzi web che aprono vanno nel browser normale (solo http/https)
+# e i programmi installati compaiono nel menu (dopo un controllo).
+# Tutti i programmi Windows stanno nello STESSO recinto (servono a Wine insieme):
+#   - "custode": fuori dal recinto, lo accende e porta fuori menu e indirizzi web
+#   - "servizio": dentro il recinto, fa partire i comandi wine che arrivano
+import fcntl, hashlib, json, os, pwd, re, select, shutil, socket, subprocess, sys, threading, time
+
+VERO_WINE = os.environ.get("RECINTO_WINE", "/usr/bin/wine")
+VERO_WINESERVER = os.environ.get("RECINTO_WINESERVER", "/usr/bin/wineserver")
+BWRAP = os.environ.get("RECINTO_BWRAP", "/usr/bin/bwrap")
+PYTHON = "/usr/bin/python3"
+XDG_OPEN_DENTRO = "/usr/local/lib/wine-recinto/xdg-open"
+QUESTO = os.path.realpath(sys.argv[0])           # /usr/local/bin/wine (anche se chiamato come winecfg)
+
+UID = os.getuid()
+UTENTE = pwd.getpwuid(UID).pw_name
+CASA = os.environ.get("HOME") or pwd.getpwuid(UID).pw_dir
+PREFISSO = os.path.join(CASA, ".wine")
+CARTELLA_UTENTE_WIN = os.path.join(PREFISSO, "drive_c", "users", UTENTE)
+SCAMBIO = os.path.join(CASA, "Windows")
+RUNTIME = os.environ.get("XDG_RUNTIME_DIR") or f"/tmp/{UID}-runtime-dir"
+CARTELLA = os.path.join(RUNTIME, "wine-recinto")
+PRESA = os.path.join(CARTELLA, "presa")
+BLOCCO = os.path.join(CARTELLA, "avvio.lock")
+LINK = os.path.join(CARTELLA, "link")
+MENU = os.path.join(CASA, ".local", "share", "wine-recinto")        # dove scrive Wine (dentro)
+MENU_VERO = os.path.join(CASA, ".local", "share", "applications", "wine-recinto")
+ICONE_VERE = os.path.join(CASA, ".local", "share", "icons")
+REGISTRO = os.path.join(CASA, ".cache", "wine-recinto.log")
+STRUMENTI = {"msidb", "msiexec", "notepad", "regedit", "regsvr32", "wineboot", "winecfg",
+             "wineconsole", "winedbg", "winefile", "winemine", "winepath", "wineserver"}
+CARTELLE_WIN = ("Desktop", "Documents", "Downloads", "Music", "Pictures", "Videos", "Templates")
+AMBIENTE_PASSA = re.compile(r"(LANG|LANGUAGE|LC_[A-Z]+|WINEDEBUG|WINEDLLOVERRIDES|DISPLAY|TZ)")
+ATTESA_VUOTO = 15          # secondi senza programmi Windows, poi il recinto si chiude
+
+def avvisa(testo):
+    print("wine (recinto): " + testo, file=sys.stderr)
+    try:
+        subprocess.Popen(["notify-send", "-a", "Programmi Windows", "-i", "dialog-warning",
+                          "Programmi Windows", testo], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        pass
+
+def dentro(percorso, cartella):
+    percorso, cartella = os.path.realpath(percorso), os.path.realpath(cartella)
+    return percorso == cartella or percorso.startswith(cartella + os.sep)
+
+# =========================================================================== fuori
+def proteggi_cartelle():
+    """Le cartelle Documenti, Desktop... di Windows sono cartelle vere nel disco C:,
+    non collegamenti alle tue cartelle (Wine all'inizio le collega a quelle della home)."""
+    if os.path.isdir(CARTELLA_UTENTE_WIN):
+        for d in CARTELLE_WIN:
+            p = os.path.join(CARTELLA_UTENTE_WIN, d)
+            if os.path.islink(p):
+                os.unlink(p)
+            os.makedirs(p, exist_ok=True)
+        if not os.path.lexists(SCAMBIO):
+            os.symlink(CARTELLA_UTENTE_WIN, SCAMBIO)
+
+def sposta_menu_vecchi():
+    """Una volta sola: le voci del menu create da Wine prima del recinto passano dal controllo."""
+    segno = os.path.join(PREFISSO, ".recinto")
+    if os.path.exists(segno):
+        return
+    vecchio = os.path.join(CASA, ".local", "share", "applications", "wine")
+    nuovo = os.path.join(MENU, "applications", "wine")
+    if os.path.isdir(vecchio) and not os.path.islink(vecchio):
+        os.makedirs(os.path.dirname(nuovo), exist_ok=True)
+        if os.path.exists(nuovo):
+            shutil.copytree(vecchio, nuovo, dirs_exist_ok=True, symlinks=True)
+            shutil.rmtree(vecchio)
+        else:
+            shutil.move(vecchio, nuovo)
+    open(segno, "w").close()
+
+GRANDE = 2 * 1024 ** 3
+def dimensione(cartella, limite):
+    tot = 0
+    for radice, _, file in os.walk(cartella):
+        for f in file:
+            try:
+                tot += os.lstat(os.path.join(radice, f)).st_size
+            except OSError:
+                pass
+            if tot > limite:
+                return tot
+    return tot
+
+def copia_se_cambiato(sorgente, dest):
+    try:
+        a, b = os.stat(sorgente), os.stat(dest)
+        if a.st_size == b.st_size and int(a.st_mtime) == int(b.st_mtime):
+            return
+    except OSError:
+        pass
+    shutil.copy2(sorgente, dest)
+
+def copia_cartella(sorgente, dest):
+    """Copia solo i file nuovi o cambiati (rilanciare un programma non ricopia tutto)."""
+    for radice, cartelle, file in os.walk(sorgente):
+        qui = os.path.join(dest, os.path.relpath(radice, sorgente))
+        os.makedirs(qui, exist_ok=True)
+        for f in file:
+            s = os.path.join(radice, f)
+            if os.path.isfile(s) and not os.path.islink(s):
+                copia_se_cambiato(s, os.path.join(qui, f))
+
+def porta_dentro(argomenti):
+    """I file da aprire (es. ~/Scaricati/setup.exe) vengono copiati nel disco C:
+    (cartella Download di Windows): da dentro il recinto la tua home non si vede."""
+    scaricati = os.path.join(CARTELLA_UTENTE_WIN, "Downloads")
+    comuni = {os.path.realpath(p) for p in [CASA, "/tmp"] + [os.path.join(CASA, n) for n in
+              ("Scaricati", "Downloads", "Scrivania", "Desktop", "Documenti", "Documents",
+               "Immagini", "Musica", "Video", "Windows")]}
+    fuori, cartella_lavoro = [], None
+    for a in argomenti:
+        # file da portare dentro: percorsi completi (doppio clic) oppure, scritti nel
+        # terminale, i soli nomi di programmi Windows (setup.exe, installa.msi...)
+        if a.startswith("/") or re.search(r"\.(exe|msi|bat|cmd|com|lnk)$", a, re.I):
+            p = os.path.abspath(a)
+            if os.path.isfile(p) and not dentro(p, PREFISSO) \
+                    and not any(dentro(p, s) for s in ("/usr", "/opt", "/etc")):
+                os.makedirs(scaricati, exist_ok=True)
+                origine = os.path.dirname(os.path.realpath(p))
+                if origine in comuni or dimensione(origine, GRANDE) > GRANDE:
+                    dest = os.path.join(scaricati, os.path.basename(p))
+                    copia_se_cambiato(p, dest)
+                else:                       # programma in una sua cartella: si copia tutta
+                    cart = os.path.join(scaricati, os.path.basename(origine))
+                    copia_cartella(origine, cart)
+                    dest = os.path.join(cart, os.path.basename(p))
+                fuori.append(dest)
+                cartella_lavoro = cartella_lavoro or os.path.dirname(dest)
+                continue
+            if os.path.isfile(p) and dentro(p, PREFISSO):
+                fuori.append(p)
+                cartella_lavoro = cartella_lavoro or os.path.dirname(p)
+                continue
+        fuori.append(a)
+    return fuori, cartella_lavoro
+
+def collega():
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        s.connect(PRESA)
+        return s
+    except OSError:
+        s.close()
+        return None
+
+def assicura_recinto():
+    """-> presa collegata al servizio nel recinto (lo accende se serve)"""
+    os.makedirs(CARTELLA, mode=0o700, exist_ok=True)
+    with open(BLOCCO, "a") as blocco:
+        fcntl.flock(blocco, fcntl.LOCK_EX)
+        s = collega()
+        if s:
+            return s
+        try:
+            os.unlink(PRESA)                # rimasta da un recinto chiuso male
+        except FileNotFoundError:
+            pass
+        subprocess.Popen([PYTHON, "-I", QUESTO, "--recinto-custode"], start_new_session=True,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         close_fds=True)
+        fine = time.time() + 20
+        while time.time() < fine:
+            time.sleep(0.2)
+            s = collega()
+            if s:
+                return s
+    try:
+        dettagli = open(REGISTRO).read()[-400:].strip()
+    except OSError:
+        dettagli = ""
+    avvisa("Il recinto per i programmi Windows non parte, quindi il programma non viene aperto."
+           + (f"\n{dettagli}" if dettagli else ""))
+    sys.exit(1)
+
+def richiesta(comando, cartella=None, aspetta=True):
+    fds = []
+    for n in (0, 1, 2):
+        try:
+            os.fstat(n); fds.append(n)
+        except OSError:
+            fds.append(os.open(os.devnull, os.O_RDWR))
+    messaggio = {"comando": comando, "cartella": cartella or PREFISSO,
+                 "ambiente": {k: v for k, v in os.environ.items() if AMBIENTE_PASSA.fullmatch(k)}}
+    for tentativo in (1, 2):
+        s = assicura_recinto()
+        try:
+            socket.send_fds(s, [(json.dumps(messaggio) + "\n").encode()], fds)
+            risposta = s.makefile("rb").readline()
+        except OSError:
+            risposta = b""
+        s.close()
+        if risposta:
+            try:
+                return int(json.loads(risposta).get("esito", 1))
+            except (ValueError, TypeError):
+                return 1
+        time.sleep(0.5)                     # il recinto si stava chiudendo: si riprova
+    return 1
+
+def cliente(nome, argomenti):
+    if os.environ.get("WINEPREFIX") and os.path.realpath(os.environ["WINEPREFIX"]) != os.path.realpath(PREFISSO):
+        avvisa(f"Si usa solo il disco Windows protetto ({PREFISSO}), non {os.environ['WINEPREFIX']}.")
+        sys.exit(1)
+    os.makedirs(PREFISSO, exist_ok=True)
+    if not os.path.exists(os.path.join(PREFISSO, "system.reg")):
+        avvisa("Preparo il disco C: dei programmi Windows (la prima volta ci vuole circa un minuto)...")
+        richiesta(["wine", "wineboot", "-i"])
+        richiesta(["wineserver", "-w"])
+    proteggi_cartelle()
+    sposta_menu_vecchi()
+    if nome == "wineserver":
+        comando = ["wineserver"] + argomenti
+    elif nome in STRUMENTI:
+        comando = ["wine", nome] + argomenti
+    else:
+        comando = ["wine"] + argomenti
+    comando[1:], lavoro = porta_dentro(comando[1:])
+    try:
+        if dentro(os.getcwd(), PREFISSO):
+            lavoro = os.getcwd()
+    except OSError:
+        pass
+    sys.exit(richiesta(comando, lavoro))
+
+# --- custode (fuori): menu e indirizzi web che arrivano dal recinto ---
+MENU_AMMESSE = {"Type", "Version", "Name", "GenericName", "Comment", "Icon", "StartupNotify",
+                "StartupWMClass", "Categories", "NoDisplay", "Keywords", "Terminal"}
+EXEC_WINE = re.compile(r'(?:env WINEPREFIX="([^"]*)" )?wine (.+)')
+VIETATI = re.compile(r'[`$;&|<>\n\r]')
+
+def sanifica_voce(testo):
+    """Voce del menu creata da Wine: si tiene solo se lancia un programma Windows
+    (nel recinto). Tutto il resto (comandi Linux, altri programmi) viene scartato."""
+    righe, sezione, eseguibile = [], None, None
+    for r in testo.splitlines():
+        r = r.rstrip("\r")
+        if r.startswith("["):
+            if sezione is not None:
+                break                       # solo la prima sezione ([Desktop Entry])
+            if r.strip() != "[Desktop Entry]":
+                return None
+            sezione = r.strip(); righe.append(sezione); continue
+        if sezione is None or "=" not in r or r.startswith("#"):
+            continue
+        chiave, valore = r.split("=", 1)
+        base = chiave.split("[", 1)[0].strip()
+        if base == "Exec":
+            m = EXEC_WINE.fullmatch(valore.strip())
+            if not m or VIETATI.search(m.group(2)):
+                return None
+            # percorsi Linux negli argomenti: solo dentro il disco C: (cosi' una voce del
+            # menu non puo' far copiare nel recinto un tuo file, es. ~/.ssh/...)
+            for pezzo in re.split(r'(?<!\\)\s+', m.group(2)):
+                if ".." in pezzo:
+                    return None
+                if "/" in pezzo and not re.fullmatch(r"/[A-Za-z]+", pezzo) \
+                        and not pezzo.startswith(os.path.realpath(PREFISSO) + "/"):
+                    return None
+            if m.group(1) is not None and os.path.realpath(m.group(1)) != os.path.realpath(PREFISSO):
+                return None
+            eseguibile = f"Exec=/usr/local/bin/wine {m.group(2)}"
+            righe.append(eseguibile)
+        elif base in MENU_AMMESSE and not VIETATI.search(valore):
+            if base == "Type" and valore.strip() != "Application":
+                return None
+            if base == "Terminal" and valore.strip() != "false":
+                continue
+            righe.append(f"{chiave}={valore}")
+    return "\n".join(righe) + "\n" if eseguibile else None
+
+def importa_menu():
+    os.makedirs(os.path.join(MENU, "applications"), exist_ok=True)
+    with open(os.path.join(MENU, ".lock"), "a") as blocco:
+        fcntl.flock(blocco, fcntl.LOCK_EX)
+        nuove = {}
+        origine = os.path.join(MENU, "applications", "wine")
+        for radice, _, file in os.walk(origine):
+            for f in file:
+                if not f.endswith(".desktop") or not re.fullmatch(r"[\w .,()+'-]+\.desktop", f):
+                    continue
+                try:
+                    testo = open(os.path.join(radice, f), errors="replace").read(65536)
+                except OSError:
+                    continue
+                buona = sanifica_voce(testo)
+                if buona:
+                    nome = "wine-" + hashlib.sha1(os.path.relpath(os.path.join(radice, f), origine).encode()).hexdigest()[:12] + ".desktop"
+                    nuove[nome] = buona
+        os.makedirs(MENU_VERO, exist_ok=True)
+        for f in os.listdir(MENU_VERO):
+            if f not in nuove:
+                os.unlink(os.path.join(MENU_VERO, f))
+        for f, testo in nuove.items():
+            p = os.path.join(MENU_VERO, f)
+            try:
+                if open(p).read() == testo:
+                    continue
+            except OSError:
+                pass
+            with open(p + ".nuovo", "w") as g:
+                g.write(testo)
+            os.replace(p + ".nuovo", p)
+        # icone: solo immagini PNG piccole, con nomi semplici
+        icone = os.path.join(MENU, "icons")
+        for radice, _, file in os.walk(icone):
+            for f in file:
+                sorgente = os.path.join(radice, f)
+                rel = os.path.relpath(sorgente, icone)
+                if not re.fullmatch(r"hicolor/\d+x\d+/apps/[\w.-]+\.png", rel) or os.path.islink(sorgente):
+                    continue
+                try:
+                    if os.path.getsize(sorgente) > 2 * 1024 ** 2 or open(sorgente, "rb").read(8) != b"\x89PNG\r\n\x1a\n":
+                        continue
+                    dest = os.path.join(ICONE_VERE, rel)
+                    if not os.path.exists(dest) or open(dest, "rb").read() != open(sorgente, "rb").read():
+                        os.makedirs(os.path.dirname(dest), exist_ok=True)
+                        shutil.copyfile(sorgente, dest)
+                except OSError:
+                    pass
+
+INDIRIZZO = re.compile(r"https?://[^\s\"'<>`\\]{1,2000}")
+aperti = []
+def apri_indirizzi():
+    try:
+        nomi = sorted(os.listdir(LINK))
+    except OSError:
+        return
+    for f in nomi:
+        p = os.path.join(LINK, f)
+        if not f.endswith(".url"):
+            if f.endswith(".tmp") and time.time() - os.lstat(p).st_mtime > 60:
+                os.unlink(p)
+            continue
+        try:
+            fd = os.open(p, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            with os.fdopen(fd, errors="replace") as g:
+                url = g.read(4096).strip()
+        except OSError:
+            url = ""
+        try:
+            os.unlink(p)
+        except OSError:
+            pass
+        adesso = time.time()
+        aperti[:] = [t for t in aperti if adesso - t < 60]
+        if INDIRIZZO.fullmatch(url) and len(aperti) < 5:      # al massimo 5 al minuto
+            aperti.append(adesso)
+            subprocess.Popen(["xdg-open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             start_new_session=True)
+
+def comando_recinto():
+    a = [BWRAP, "--unshare-user", "--disable-userns", "--unshare-pid", "--unshare-uts",
+         "--unshare-cgroup-try", "--new-session", "--die-with-parent",
+         "--ro-bind", "/", "/",                         # il sistema: si vede, non si cambia
+         "--dev", "/dev", "--dev-bind-try", "/dev/dri", "/dev/dri",
+         "--proc", "/proc",                             # solo i processi del recinto
+         "--tmpfs", "/home", "--tmpfs", "/tmp", "--tmpfs", "/var/tmp", "--tmpfs", "/run"]
+    # /opt: Firefox e Tor Browser (che tiene li' la cronologia); /mnt, /media: chiavette e dischi
+    for p in ("/opt", "/mnt", "/media", "/srv"):
+        if os.path.isdir(p):
+            a += ["--tmpfs", p]                         # chiavette e altri dischi: nascosti
+    a += ["--ro-bind-try", "/run/systemd/resolve", "/run/systemd/resolve",   # nomi dei siti
+          "--ro-bind-try", "/run/udev", "/run/udev",
+          "--ro-bind-try", "/tmp/.X11-unix", "/tmp/.X11-unix",                # le finestre (X11)
+          "--bind", PREFISSO, PREFISSO,
+          "--bind", CARTELLA, CARTELLA,
+          "--bind", os.path.join(MENU, "applications"), os.path.join(CASA, ".local", "share", "applications"),
+          "--bind", os.path.join(MENU, "icons"), os.path.join(CASA, ".local", "share", "icons"),
+          "--bind-try", os.path.join(RUNTIME, "pipewire-0"), os.path.join(RUNTIME, "pipewire-0"),
+          "--bind-try", os.path.join(RUNTIME, "pulse"), os.path.join(RUNTIME, "pulse"),
+          "--setenv", "WINE_RECINTO", "1", "--setenv", "WINEPREFIX", PREFISSO,
+          "--setenv", "HOME", CASA, "--setenv", "XDG_RUNTIME_DIR", RUNTIME,
+          "--unsetenv", "WAYLAND_DISPLAY", "--unsetenv", "DBUS_SESSION_BUS_ADDRESS",
+          "--chdir", PREFISSO,
+          PYTHON, "-I", QUESTO, "--recinto-servizio"]
+    if os.path.exists("/usr/local/bin/xdg-open") and os.path.exists(XDG_OPEN_DENTRO):
+        i = a.index("--setenv")             # gli indirizzi web escono dal recinto solo da qui
+        a[i:i] = ["--ro-bind", XDG_OPEN_DENTRO, "/usr/local/bin/xdg-open"]
+    return a
+
+def custode():
+    for d in (CARTELLA, LINK, os.path.join(MENU, "applications"), os.path.join(MENU, "icons"),
+              os.path.dirname(REGISTRO), PREFISSO):
+        os.makedirs(d, mode=0o700, exist_ok=True)
+    registro = open(REGISTRO, "w")
+    registro.write(time.strftime("%Y-%m-%d %H:%M:%S") + " recinto acceso\n"); registro.flush()
+    p = subprocess.Popen(comando_recinto(), stdin=subprocess.DEVNULL, stdout=registro, stderr=registro)
+    while p.poll() is None:
+        try:
+            importa_menu(); apri_indirizzi()
+        except Exception as e:                  # il custode non deve mai fermarsi per questo
+            registro.write(f"custode: {e}\n"); registro.flush()
+        try:
+            p.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            pass
+    importa_menu()
+    registro.write(time.strftime("%Y-%m-%d %H:%M:%S") + f" recinto chiuso ({p.returncode})\n")
+
+# ========================================================================== dentro
+class Servizio:
+    def __init__(self):
+        self.blocco = threading.Lock()
+        self.attivi = 0
+        self.ultimo = time.time()
+
+    def esegui(self, conn):
+        fds = []
+        try:
+            dati, fds, _, _ = socket.recv_fds(conn, 1 << 20, 3)
+            while not dati.endswith(b"\n"):
+                altro = conn.recv(1 << 20)
+                if not altro:
+                    return
+                dati += altro
+            m = json.loads(dati)
+            comando = [str(x) for x in m["comando"]]
+            programma = {"wine": VERO_WINE, "wineserver": VERO_WINESERVER}.get(comando[0])
+            if programma is None or len(fds) != 3:
+                conn.sendall(b'{"esito": 1}\n'); return
+            ambiente = dict(os.environ)
+            ambiente.update({k: str(v) for k, v in m.get("ambiente", {}).items() if AMBIENTE_PASSA.fullmatch(k)})
+            cartella = m.get("cartella") if os.path.isdir(str(m.get("cartella"))) else PREFISSO
+            with self.blocco:
+                self.attivi += 1; self.ultimo = time.time()
+            try:
+                p = subprocess.Popen([programma] + comando[1:], stdin=fds[0], stdout=fds[1], stderr=fds[2],
+                                     cwd=cartella, env=ambiente)
+                for fd in fds:
+                    os.close(fd)
+                fds = []
+                esito = p.wait()
+            except OSError:
+                esito = 127
+            finally:
+                with self.blocco:
+                    self.attivi -= 1; self.ultimo = time.time()
+            conn.sendall((json.dumps({"esito": esito}) + "\n").encode())
+        except (OSError, ValueError, KeyError, IndexError, TypeError):
+            pass
+        finally:
+            for fd in fds:
+                os.close(fd)
+            conn.close()
+
+    def altri_processi(self):
+        """Programmi Windows ancora accesi nel recinto (tutti tranne il recinto stesso)."""
+        io = os.getpid()
+        return [p for p in os.listdir("/proc") if p.isdigit() and int(p) not in (1, io)
+                and os.path.exists(f"/proc/{p}/exe")]
+
+    def principale(self):
+        try:
+            os.unlink(PRESA)
+        except FileNotFoundError:
+            pass
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.bind(PRESA); os.chmod(PRESA, 0o600); s.listen(16)
+        while True:
+            pronti, _, _ = select.select([s], [], [], 5)
+            if pronti:
+                conn, _ = s.accept()
+                with self.blocco:
+                    self.ultimo = time.time()
+                threading.Thread(target=self.esegui, args=(conn,), daemon=True).start()
+                continue
+            with self.blocco:
+                fermo = self.attivi == 0 and time.time() - self.ultimo > ATTESA_VUOTO
+            if fermo and not self.altri_processi():
+                with open(BLOCCO, "a") as blocco:
+                    fcntl.flock(blocco, fcntl.LOCK_EX)
+                    if select.select([s], [], [], 0)[0] or self.altri_processi():
+                        continue                    # e' arrivato qualcuno proprio adesso
+                    os.unlink(PRESA)
+                    os._exit(0)
+
+def principale():
+    nome = os.path.basename(sys.argv[0])
+    argomenti = sys.argv[1:]
+    if os.environ.get("WINE_RECINTO") == "1":          # gia' dentro il recinto: Wine vero
+        if nome == "wineserver":
+            os.execv(VERO_WINESERVER, [VERO_WINESERVER] + argomenti)
+        os.execv(VERO_WINE, [VERO_WINE] + ([nome] if nome in STRUMENTI else []) + argomenti)
+    if argomenti[:1] == ["--recinto-servizio"]:
+        sys.exit("solo dentro il recinto")
+    if argomenti[:1] == ["--recinto-custode"]:
+        return custode()
+    return cliente(nome, argomenti)
+
+if __name__ == "__main__":
+    if sys.argv[1:2] == ["--recinto-servizio"] and os.environ.get("WINE_RECINTO") == "1":
+        Servizio().principale()
+    else:
+        principale()

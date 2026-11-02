@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Modalità fantasma
+Comment=Tutto quello che fai online passa da Tor: nessuno vede chi sei
+Exec=/usr/local/bin/fantasma
+Icon=fantasma
+Terminal=false
+Categories=Network;Security;

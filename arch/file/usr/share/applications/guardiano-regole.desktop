@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Regole della rete
+Comment=I programmi a cui hai permesso o bloccato internet
+Exec=/usr/local/bin/guardiano-regole
+Icon=security-high
+Terminal=false
+Categories=System;Security;

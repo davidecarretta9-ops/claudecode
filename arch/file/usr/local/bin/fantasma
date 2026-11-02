@@ -1,0 +1,101 @@
+#!/bin/bash
+# Modalita' fantasma (creato da lfs.sh): la finestra per accenderla e spegnerla.
+# Accesa: tutto quello che fai online passa da Tor, il tuo indirizzo IP non si vede,
+# la scheda di rete e il nome del computer sono camuffati, webcam e microfono spenti.
+AIUTO=/usr/local/sbin/fantasma-aiuto
+finestra() { yad --title "Modalità fantasma" --window-icon fantasma --center --fixed --width 540 "$@"; }
+sicuro() { sed 's/&/\&amp;/g; s/</\&lt;/g'; }
+
+sfondo() { setsid /usr/local/bin/sfondo-desktop >/dev/null 2>&1 < /dev/null & }
+
+attendi_tor() {
+  sudo -n "$AIUTO" attendi \
+    | finestra --progress --image fantasma --auto-close --button "Nascondi:0" \
+               --text "<b>Mi collego alla rete Tor...</b>
+Di solito ci vuole meno di un minuto. Intanto internet è bloccato:
+nessun dato esce senza passare da Tor."
+}
+
+accendi() {
+  local msg
+  if ! msg=$(sudo -n "$AIUTO" accendi 2>&1); then
+    finestra --image dialog-error --button OK:0 \
+             --text "<b>Non riesco ad accendere la modalità fantasma.</b>
+
+<small>$(printf '%s' "$msg" | tail -n 3 | sicuro)</small>"
+    return 1
+  fi
+  sfondo
+  attendi_tor
+  if sudo -n "$AIUTO" pronto; then
+    notify-send -a "Modalità fantasma" -i fantasma "Modalità fantasma accesa" "Tutto passa da Tor" 2>/dev/null
+    finestra --image fantasma --button OK:0 --text "<b>Modalità fantasma accesa.</b>
+
+  - tutto quello che fai online passa da Tor: i siti non vedono il tuo indirizzo IP
+  - scheda di rete e nome del computer camuffati
+  - webcam e microfono spenti, niente registri sul disco
+
+<b>Chiudi e riapri i programmi già aperti</b> (soprattutto i browser).
+Per non farti riconoscere usa <b>Tor Browser</b> e non entrare nei tuoi account.
+Resta accesa anche dopo un riavvio, finché non la spegni."
+  else
+    finestra --image dialog-warning --button OK:0 --text "<b>Tor non si è ancora collegato.</b>
+
+Finché Tor non si collega internet resta bloccato (niente esce senza Tor).
+Aspetta un po' e riapri questa finestra, oppure spegni la modalità fantasma."
+  fi
+}
+
+spegni() {
+  finestra --image dialog-warning --button "Annulla:1" --button "Spegni:0" \
+           --text "<b>Spegnere la modalità fantasma?</b>
+
+I siti torneranno a vedere il tuo indirizzo IP." || return 0
+  local msg
+  if ! msg=$(sudo -n "$AIUTO" spegni 2>&1); then
+    finestra --image dialog-error --button OK:0 \
+             --text "<b>Non riesco a spegnere la modalità fantasma.</b>
+
+<small>$(printf '%s' "$msg" | tail -n 3 | sicuro)</small>"
+    return 1
+  fi
+  sfondo
+  finestra --image dialog-information --button OK:0 \
+           --text "<b>Modalità fantasma spenta.</b>  Chiudi e riapri i programmi già aperti."
+}
+
+if [ "$(id -un)" = fantasma ]; then
+  finestra --image fantasma --button OK:0 --text "<b>Sei nell'utente fantasma.</b>
+
+Qui la modalità fantasma è sempre accesa e quello che fai sta solo in memoria:
+allo spegnimento sparisce tutto. Per tenere un file, salvalo su una chiavetta."
+  exit 0
+fi
+
+case "$(sudo -n "$AIUTO" stato 2>/dev/null)" in
+  acceso)
+    # subito il pulsante per spegnerla, anche se Tor non si e' ancora collegato (prima
+    # si aspettava Tor fino a 3 minuti e sembrava che non si potesse spegnere)
+    if sudo -n "$AIUTO" pronto; then
+      testo="<b>La modalità fantasma è accesa.</b>  Tutto passa da Tor."
+    else
+      testo="<b>La modalità fantasma è accesa</b>, ma Tor non si è ancora collegato:
+internet resta bloccato finché non si collega."
+    fi
+    finestra --image fantasma --button "Spegni:2" --button "Chiudi:0" --text "$testo"
+    [ $? -eq 2 ] && spegni ;;
+  spento)
+    finestra --image fantasma --button "Annulla:1" --button "Accendi:0" --text "<b>Modalità fantasma</b>
+
+Accendendola:
+  - <b>tutto</b> quello che fai online passa da Tor (non solo il browser):
+    nessun sito, né il tuo fornitore di internet, vede cosa fai e da dove
+  - Tor è nascosto: il fornitore di internet non vede nemmeno che lo usi
+  - scheda di rete e nome del computer camuffati, niente IPv6
+  - webcam e microfono spenti, niente registri sul disco
+
+Internet sarà più lento e alcune cose non funzioneranno
+(Spotify, molti giochi online, alcune banche)." && accendi ;;
+  *)
+    finestra --image dialog-error --button OK:0 --text "La modalità fantasma non risponde." ;;
+esac

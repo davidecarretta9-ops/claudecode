@@ -1,0 +1,147 @@
+#!/usr/bin/python3 -I
+# Aiutante della VPN (creato da lfs.sh). Gira come root (con sudo, senza password
+# per il gruppo wheel) e sa fare solo queste cose:
+#   vpn-aiuto importa < file.conf   controlla il file WireGuard e lo salva
+#   vpn-aiuto accendi | spegni | stato
+#   vpn-aiuto su | giu              (li usa il servizio vpn.service)
+# Con la VPN accesa i programmi dell'utente possono uscire SOLO dalla VPN: se la VPN
+# cade, restano senza internet invece di mostrare il tuo vero indirizzo IP.
+import os, re, subprocess, sys
+
+CARTELLA = os.environ.get("VPN_CARTELLA", "/etc/wireguard")
+CONF = os.path.join(CARTELLA, "vpn.conf")
+SEMPRE = os.path.join(CARTELLA, "sempre-accesa")
+SCHEDA = "vpn"
+os.environ["PATH"] = "/usr/bin:/usr/sbin"
+
+# solo queste voci passano: niente PostUp/PreDown (sono comandi che girerebbero come root)
+AMMESSE = {
+    "Interface": {"privatekey": "PrivateKey", "address": "Address", "dns": "DNS", "mtu": "MTU",
+                  "listenport": "ListenPort"},
+    "Peer": {"publickey": "PublicKey", "presharedkey": "PresharedKey", "allowedips": "AllowedIPs",
+             "endpoint": "Endpoint", "persistentkeepalive": "PersistentKeepalive"},
+}
+CHIAVE = re.compile(r"[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=")
+VALORE = re.compile(r"[A-Za-z0-9+/=.,:\[\]_ -]{1,300}")
+
+def pulisci(testo):
+    sezione, righe, peer = None, [], 0
+    visto = set()
+    for r in testo.splitlines():
+        r = r.split("#", 1)[0].strip()
+        if not r:
+            continue
+        m = re.fullmatch(r"\[\s*(\w+)\s*\]", r)
+        if m:
+            sezione = next((s for s in AMMESSE if s.lower() == m.group(1).lower()), None)
+            if sezione is None:
+                raise ValueError(f"sezione sconosciuta [{m.group(1)}]")
+            if sezione == "Interface" and "Interface" in visto:
+                raise ValueError("ci sono due sezioni [Interface]")
+            peer += sezione == "Peer"
+            visto.add(sezione)
+            righe.append(f"\n[{sezione}]")
+            continue
+        if sezione is None or "=" not in r:
+            raise ValueError("il file non e' nel formato WireGuard")
+        nome, valore = (x.strip() for x in r.split("=", 1))
+        nome = AMMESSE[sezione].get(nome.lower())
+        if nome is None:
+            continue                                    # PostUp, PreDown, Table...: scartati
+        if not VALORE.fullmatch(valore):
+            raise ValueError(f"valore non valido per {nome}")
+        if nome in ("PrivateKey", "PublicKey", "PresharedKey") and not CHIAVE.fullmatch(valore):
+            raise ValueError(f"chiave non valida ({nome})")
+        visto.add(nome)
+        righe.append(f"{nome} = {valore}")
+    for necessario in ("Interface", "PrivateKey", "Address", "Peer", "PublicKey", "Endpoint", "AllowedIPs"):
+        if necessario not in visto:
+            raise ValueError(f"manca {necessario}: non e' un file WireGuard completo")
+    return "# VPN WireGuard (importata da vpn-aiuto)\n" + "\n".join(righe).lstrip("\n") + "\n"
+
+def comando(*c, muto=False):
+    try:
+        return subprocess.run(c, stdout=subprocess.DEVNULL if muto else None,
+                              stderr=subprocess.DEVNULL if muto else None).returncode == 0
+    except OSError:
+        return False
+
+def accesa():
+    return comando("ip", "link", "show", SCHEDA, muto=True)
+
+def blocco_fuori_vpn(attivo):
+    """La catena VPN del firewall (vedi firewall-avvia): piena = i programmi dell'utente
+    escono solo dalla VPN; vuota = escono normalmente."""
+    for prog in ("iptables", "ip6tables"):
+        comando(prog, "-N", "VPN", muto=True)
+        comando(prog, "-F", "VPN")
+        if attivo:
+            comando(prog, "-A", "VPN", "-m", "owner", "--uid-owner", "1000-59999",
+                    "!", "-o", SCHEDA, "-j", "REJECT")
+
+def su():
+    if not os.path.exists(CONF):
+        print("La VPN non e' configurata"); return False
+    if os.path.exists(SEMPRE):
+        blocco_fuori_vpn(True)
+    if not accesa() and not comando("wg-quick", "up", SCHEDA):
+        return False
+    comando("resolvectl", "dnsovertls", SCHEDA, "no", muto=True)   # i DNS della VPN sono dentro la VPN
+    return True
+
+def giu():
+    if accesa():
+        comando("wg-quick", "down", SCHEDA)
+    return True
+
+def accendi():
+    if not os.path.exists(CONF):
+        print("La VPN non e' configurata: prima scegli il file"); return False
+    open(SEMPRE, "w").close()
+    blocco_fuori_vpn(True)
+    comando("systemctl", "enable", "vpn.service", muto=True)
+    comando("systemctl", "restart", "vpn.service")
+    if accesa():
+        return True
+    print("La VPN non si accende: la spengo, internet resta senza VPN")
+    spegni()
+    return False
+
+def spegni():
+    try:
+        os.unlink(SEMPRE)
+    except FileNotFoundError:
+        pass
+    comando("systemctl", "disable", "--now", "vpn.service", muto=True)
+    giu()
+    blocco_fuori_vpn(False)
+    return True
+
+def importa():
+    testo = sys.stdin.read(65536)
+    try:
+        nuovo = pulisci(testo)
+    except (ValueError, UnicodeError) as e:
+        print(e); return False
+    os.makedirs(CARTELLA, mode=0o700, exist_ok=True)
+    tmp = CONF + ".nuovo"
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(nuovo)
+    os.replace(tmp, CONF)
+    if accesa():                          # gia' accesa: riparte con il file nuovo
+        giu(); su()
+    return True
+
+def stato():
+    print("non configurata" if not os.path.exists(CONF) else "accesa" if accesa() else "spenta")
+    return True
+
+AZIONI = {"importa": importa, "accendi": accendi, "spegni": spegni, "stato": stato, "su": su, "giu": giu}
+
+if __name__ == "__main__":
+    if os.geteuid() != 0:
+        sys.exit("Serve root: usa  sudo vpn-aiuto ...")
+    if len(sys.argv) != 2 or sys.argv[1] not in AZIONI:
+        sys.exit("Uso: vpn-aiuto importa|accendi|spegni|stato|su|giu")
+    sys.exit(0 if AZIONI[sys.argv[1]]() else 1)

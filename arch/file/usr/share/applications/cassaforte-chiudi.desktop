@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Chiudi la cassaforte
+Comment=Cifra di nuovo la cartella Cassaforte
+Exec=/usr/local/bin/cassaforte chiudi
+Icon=system-lock-screen
+Terminal=false
+Categories=Utility;Security;

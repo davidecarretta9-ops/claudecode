@@ -1,0 +1,246 @@
+#!/usr/bin/python3 -I
+# Modalita' fantasma (creato da lfs.sh). Gira come root (con sudo) e fa:
+#   fantasma-aiuto accendi   tutto internet passa da Tor (anche gli altri programmi),
+#                            scheda di rete camuffata, nome del PC nascosto, niente IPv6,
+#                            registro di sistema solo in memoria, webcam e microfono spenti
+#   fantasma-aiuto spegni    torna tutto normale
+#   fantasma-aiuto stato | pronto | attendi | avvio (all'accensione del computer)
+#   fantasma-aiuto prepara   accesa di serie: scrive solo i file (vale dal prossimo avvio)
+# Quando e' accesa resta accesa anche dopo un riavvio, finche' non la spegni.
+import glob, os, re, secrets, subprocess, sys, time
+
+CARTELLA = os.environ.get("FANTASMA_CARTELLA", "/etc/fantasma")
+STATO = os.path.join(CARTELLA, "attivo")
+PONTI_MIEI = os.path.join(CARTELLA, "ponti")                  # ponti personali (facoltativi)
+PONTI_PREDEFINITI = os.path.join(CARTELLA, "ponti-predefiniti")
+TRASPORTI = os.path.join(CARTELLA, "trasporti")
+SENZA_PONTI = os.path.join(CARTELLA, "senza-ponti")
+TORRC = "/etc/tor/fantasma.torrc"
+LOG_TOR = "/run/tor-fantasma/notice.log"
+MACHINE_ID_FINTO = "/run/fantasma/machine-id"
+SEGNO = "# Creato da lfs.sh (modalita' fantasma)"
+os.environ["PATH"] = "/usr/bin:/usr/sbin"
+
+FILE = {
+    # nomi dei siti: chiesti a Tor (porta DNS di Tor), mai alla rete
+    "/etc/systemd/resolved.conf.d/99-fantasma.conf":
+        f"{SEGNO}\n[Resolve]\nDNS=\nDNS=127.0.0.1:9053\nDNSOverTLS=no\nDNSSEC=no\nDomains=~.\n"
+        "LLMNR=no\nMulticastDNS=no\n",
+    # registro di sistema solo in memoria
+    "/etc/systemd/journald.conf.d/99-fantasma.conf": f"{SEGNO}\n[Journal]\nStorage=volatile\n",
+    # niente IPv6 (Tor qui usa solo IPv4: cosi' niente puo' uscire da IPv6)
+    "/etc/sysctl.d/99-fantasma.conf":
+        f"{SEGNO}\nnet.ipv6.conf.all.disable_ipv6 = 1\nnet.ipv6.conf.default.disable_ipv6 = 1\n",
+    # webcam e microfono spenti
+    "/etc/udev/rules.d/90-fantasma.rules":
+        f'{SEGNO}\nSUBSYSTEM=="video4linux", MODE="0000"\nSUBSYSTEM=="sound", KERNEL=="pcmC*D*c", MODE="0000"\n',
+}
+
+def comando(*c, muto=True):
+    try:
+        return subprocess.run(c, stdout=subprocess.DEVNULL if muto else None,
+                              stderr=subprocess.DEVNULL if muto else None).returncode == 0
+    except OSError:
+        return False
+
+def scrivi(percorso, testo, permessi=0o644):
+    os.makedirs(os.path.dirname(percorso), exist_ok=True)
+    with open(percorso + ".nuovo", "w") as f:
+        f.write(testo)
+    os.chmod(percorso + ".nuovo", permessi)
+    os.replace(percorso + ".nuovo", percorso)
+
+def togli_se_nostro(percorso):
+    try:
+        if open(percorso).read().startswith(SEGNO):
+            os.unlink(percorso)
+    except OSError:
+        pass
+
+def file_rete():
+    """Per ogni rete (.network): il router riceve solo l'indirizzo della scheda (camuffato),
+    non l'identificativo fisso del computer."""
+    return {f"{n}.d/90-fantasma.conf": f"{SEGNO}\n[DHCPv4]\nClientIdentifier=mac\nSendHostname=no\n"
+            for n in glob.glob("/etc/systemd/network/*.network")}
+
+def file_link():
+    """All'accensione la scheda di rete prende un indirizzo (MAC) casuale."""
+    for d in ("/usr/lib/udev/network", "/usr/lib/systemd/network"):
+        base = os.path.join(d, "99-default.link")
+        if os.path.isfile(base):
+            testo = open(base).read()
+            if re.search(r"^MACAddressPolicy=", testo, re.M):
+                testo = re.sub(r"^MACAddressPolicy=.*$", "MACAddressPolicy=random", testo, flags=re.M)
+            else:
+                testo = testo.replace("[Link]\n", "[Link]\nMACAddressPolicy=random\n", 1)
+            return {base.replace("/usr/lib/", "/etc/", 1): SEGNO + "\n" + testo}
+    return {}
+
+def schede():
+    return [n for n in sorted(os.listdir("/sys/class/net"))
+            if n != "lo" and os.path.exists(f"/sys/class/net/{n}/device")]
+
+def mac_casuale():
+    b = bytearray(secrets.token_bytes(6))
+    b[0] = (b[0] & 0xFE) | 0x02                       # indirizzo "locale", non di un produttore
+    return ":".join(f"{x:02x}" for x in b)
+
+def mac_vero(scheda):
+    try:
+        uscita = subprocess.run(["ip", "-d", "link", "show", "dev", scheda], capture_output=True, text=True).stdout
+    except OSError:
+        return None
+    m = re.search(r"permaddr ([0-9a-f:]{17})", uscita)
+    return m.group(1) if m else None
+
+def cambia_mac(scheda, mac):
+    comando("ip", "link", "set", "dev", scheda, "down")
+    comando("ip", "link", "set", "dev", scheda, "address", mac)
+    comando("ip", "link", "set", "dev", scheda, "up")
+
+def scrivi_torrc():
+    righe = [SEGNO, "# Si rigenera a ogni accensione: i ponti personali vanno in " + PONTI_MIEI,
+             "DataDirectory /var/lib/tor", "Log notice file " + LOG_TOR,
+             "SocksPort 127.0.0.1:9050", "SocksPort 127.0.0.1:9150",
+             "TransPort 127.0.0.1:9040 IsolateDestAddr IsolateDestPort",
+             "DNSPort 127.0.0.1:9053", "AutomapHostsOnResolve 1", "AutomapHostsSuffixes .onion,.exit",
+             "VirtualAddrNetworkIPv4 10.192.0.0/10", "ClientUseIPv6 0", "AvoidDiskWrites 1"]
+    def leggi(p):
+        try:
+            return [r.strip() for r in open(p) if r.strip() and not r.lstrip().startswith("#")]
+        except OSError:
+            return []
+    ponti = [] if os.path.exists(SENZA_PONTI) else (leggi(PONTI_MIEI) or leggi(PONTI_PREDEFINITI))
+    ponti = [p[len("Bridge "):] if p.startswith("Bridge ") else p for p in ponti]
+    if ponti:
+        righe += ["UseBridges 1"] + leggi(TRASPORTI) + ["Bridge " + p for p in ponti]
+    scrivi(TORRC, "\n".join(righe) + "\n")
+
+def acceso():
+    return os.path.exists(STATO)
+
+def avanzamento():
+    try:
+        testo = open(LOG_TOR, errors="replace").read()
+    except OSError:
+        return 0
+    numeri = re.findall(r"Bootstrapped (\d+)%", testo)
+    return int(numeri[-1]) if numeri else 0
+
+def nascondi_identita():
+    comando("hostname", "localhost")
+    if not montato("/etc/machine-id"):
+        os.makedirs(os.path.dirname(MACHINE_ID_FINTO), exist_ok=True)
+        scrivi(MACHINE_ID_FINTO, secrets.token_hex(16) + "\n", 0o444)
+        comando("mount", "--bind", MACHINE_ID_FINTO, "/etc/machine-id")
+
+def montato(percorso):
+    try:
+        return any(r.split()[4] == percorso for r in open("/proc/self/mountinfo"))
+    except OSError:
+        return False
+
+def accendi():
+    os.makedirs(CARTELLA, exist_ok=True)
+    scrivi_torrc()
+    for p, t in {**FILE, **file_rete(), **file_link()}.items():
+        scrivi(p, t)
+    open(STATO, "w").close()
+    # prima il firewall: da adesso niente esce se non da Tor (anche mentre Tor si collega)
+    comando("/usr/local/sbin/firewall-avvia", muto=False)
+    comando("sysctl", "-q", "-p", "/etc/sysctl.d/99-fantasma.conf")
+    comando("systemctl", "enable", "tor-fantasma.service")
+    comando("fuser", "-k", "-n", "tcp", "9150")      # il Tor "privato" di Tor Browser, se aperto
+    comando("systemctl", "restart", "tor-fantasma.service")
+    comando("systemctl", "restart", "systemd-resolved.service")
+    comando("systemctl", "restart", "systemd-journald.service")
+    nascondi_identita()
+    for s in schede():
+        cambia_mac(s, mac_casuale())
+    comando("networkctl", "reload")
+    for s in schede():
+        comando("networkctl", "reconfigure", s)
+    comando("udevadm", "control", "--reload")
+    comando("udevadm", "trigger", "--subsystem-match=video4linux", "--subsystem-match=sound")
+    print("Modalita' fantasma accesa")
+    return True
+
+def spegni():
+    for p in list(FILE) + list(file_rete()) + list(file_link()):
+        togli_se_nostro(p)
+    try:
+        os.unlink(STATO)
+    except FileNotFoundError:
+        pass
+    comando("/usr/local/sbin/firewall-avvia", muto=False)
+    comando("systemctl", "disable", "--now", "tor-fantasma.service")
+    for v in ("all", "default") + tuple(schede()):
+        comando("sysctl", "-q", "-w", f"net.ipv6.conf.{v}.disable_ipv6=0")
+    comando("systemctl", "restart", "systemd-resolved.service")
+    comando("systemctl", "restart", "systemd-journald.service")
+    if montato("/etc/machine-id"):
+        comando("umount", "/etc/machine-id")
+    try:
+        comando("hostname", open("/etc/hostname").read().strip() or "localhost")
+    except OSError:
+        pass
+    for s in schede():
+        vero = mac_vero(s)
+        if vero:
+            cambia_mac(s, vero)
+    comando("networkctl", "reload")
+    for s in schede():
+        comando("networkctl", "reconfigure", s)
+    comando("udevadm", "control", "--reload")
+    comando("udevadm", "trigger", "--subsystem-match=video4linux", "--subsystem-match=sound")
+    print("Modalita' fantasma spenta")
+    return True
+
+def avvio():
+    """All'accensione del computer (prima della rete): se la modalita' e' accesa,
+    nasconde nome del computer e identificativo (la scheda di rete la camuffa udev)."""
+    if acceso():
+        nascondi_identita()
+    return True
+
+def attendi():
+    """Per la finestra di avanzamento (yad --progress): numeri e testo, fino al 100%."""
+    if not acceso():
+        return False
+    fine = time.time() + 180
+    ultimo = -1
+    while time.time() < fine:
+        n = avanzamento()
+        if n != ultimo:
+            print(f"{n}\n# Collegamento alla rete Tor: {n}%", flush=True)
+            ultimo = n
+        if n >= 100:
+            return True
+        time.sleep(1)
+    return False
+
+def prepara():
+    """Accesa di serie: scrive solo i file della modalita' (si usa quando si costruisce
+    la distro). Firewall, Tor, nome del computer e scheda di rete li sistema l'avvio
+    della distro quando la trova accesa. Niente comandi sulla rete: dentro il chroot
+    toccherebbero il PC che costruisce la distro."""
+    os.makedirs(CARTELLA, exist_ok=True)
+    scrivi_torrc()
+    for p, t in {**FILE, **file_rete(), **file_link()}.items():
+        scrivi(p, t)
+    open(STATO, "w").close()
+    comando("systemctl", "enable", "tor-fantasma.service")
+    print("Modalita' fantasma accesa (vale dal prossimo avvio)")
+    return True
+
+AZIONI = {"accendi": accendi, "spegni": spegni, "avvio": avvio, "attendi": attendi,
+          "prepara": prepara,
+          "stato": lambda: print("acceso" if acceso() else "spento") or True,
+          "pronto": lambda: acceso() and avanzamento() >= 100}
+
+if __name__ == "__main__":
+    if os.geteuid() != 0:
+        sys.exit("Serve root: usa  sudo fantasma-aiuto ...")
+    if len(sys.argv) != 2 or sys.argv[1] not in AZIONI:
+        sys.exit("Uso: fantasma-aiuto accendi|spegni|stato|pronto|attendi|avvio|prepara")
+    sys.exit(0 if AZIONI[sys.argv[1]]() else 1)

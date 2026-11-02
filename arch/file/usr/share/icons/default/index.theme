@@ -1,0 +1,4 @@
+[Icon Theme]
+Name=Default
+Comment=Puntatori predefiniti (creato da lfs.sh): quelli del tema Vetro
+Inherits=Vetro

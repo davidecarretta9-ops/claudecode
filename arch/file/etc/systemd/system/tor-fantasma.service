@@ -1,0 +1,22 @@
+[Unit]
+Description=Tor per la modalita' fantasma (lfs.sh)
+After=network-online.target firewall.service
+Wants=network-online.target
+
+[Service]
+User=tor
+Group=tor
+RuntimeDirectory=tor-fantasma
+RuntimeDirectoryMode=0750
+ExecStartPre=/usr/bin/tor -f /etc/tor/fantasma.torrc --verify-config --quiet
+ExecStart=/usr/bin/tor -f /etc/tor/fantasma.torrc --RunAsDaemon 0
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/tor
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

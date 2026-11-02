@@ -1,0 +1,13 @@
+[Unit]
+Description=Prepara la casa (in memoria) dell'utente fantasma
+Requires=home-fantasma.mount
+After=home-fantasma.mount
+Before=systemd-user-sessions.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'cp -a /usr/local/share/fantasma/casa/. /home/fantasma/ && chown -R fantasma: /home/fantasma'
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,26 @@
+#!/bin/bash
+# Blocca lo schermo (creato da lfs.sh): per sbloccare scrivi la tua password e premi Invio.
+# Nel desktop Vetro usa il blocco dei pannelli (orologio grande); se non risponde,
+# o nel desktop classico, usa swaylock con lo stesso sfondo del desktop.
+#   blocca-schermo --attendi   solo swaylock, e aspetta finche' non sblocchi
+fondo=-f
+if [ "${1:-}" = --attendi ]; then
+  fondo=""
+else
+  if pgrep -u "$(id -u)" -x Hyprland >/dev/null 2>&1 \
+     && qs -p /etc/xdg/quickshell/vetro ipc call blocco blocca >/dev/null 2>&1; then
+    exit 0
+  fi
+  pgrep -u "$(id -u)" -x swaylock >/dev/null && exit 0
+fi
+img=$(/usr/local/bin/sfondo-desktop --percorso 2>/dev/null)
+[ -n "$img" ] && [ -f "$img" ] || img=/usr/share/backgrounds/sfondo-desktop.png
+exec swaylock $fondo -i "$img" -s fill \
+     --font "Adwaita Sans" --indicator-radius 80 --indicator-thickness 6 \
+     --inside-color ffffff33 --inside-clear-color ffffff33 --inside-ver-color 0a84ff55 \
+     --inside-wrong-color ff5f5755 --ring-color ffffffcc --ring-clear-color febc2eff \
+     --ring-ver-color 0a84ffff --ring-wrong-color ff5f57ff --key-hl-color 0a84ffff \
+     --bs-hl-color ff5f57ff --line-color 00000000 --line-clear-color 00000000 \
+     --line-ver-color 00000000 --line-wrong-color 00000000 --separator-color 00000000 \
+     --text-color ffffffff --text-clear-color ffffffff --text-ver-color ffffffff \
+     --text-wrong-color ffffffff

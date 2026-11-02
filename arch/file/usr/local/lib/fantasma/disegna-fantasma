@@ -1,0 +1,94 @@
+#!/usr/bin/python3 -I
+# Disegna lo sfondo scuro e l'icona della modalita' fantasma (PNG, solo Python).
+#   disegna-fantasma sfondo FILE.png      1920x1080
+#   disegna-fantasma icona FILE.png LATO  icona quadrata (es. 48, 64, 128)
+import math, struct, sys, zlib
+
+def png(percorso, larghezza, altezza, pixel, alfa):
+    righe = bytearray()
+    for y in range(altezza):
+        righe.append(0)
+        righe += pixel[y]
+    def blocco(tipo, dati):
+        return struct.pack(">I", len(dati)) + tipo + dati + struct.pack(">I", zlib.crc32(tipo + dati) & 0xffffffff)
+    with open(percorso, "wb") as f:
+        f.write(b"\x89PNG\r\n\x1a\n")
+        f.write(blocco(b"IHDR", struct.pack(">IIBBBBB", larghezza, altezza, 8, 6 if alfa else 2, 0, 0, 0)))
+        f.write(blocco(b"IDAT", zlib.compress(bytes(righe), 9)))
+        f.write(blocco(b"IEND", b""))
+
+def dentro_fantasma(x, y):
+    """Fantasmino in un quadrato 0..1: testa tonda, corpo, bordo in basso ondulato.
+    -> 0 fuori, 1 corpo, 2 occhi"""
+    cx, testa, raggio = 0.5, 0.38, 0.27
+    for ox in (0.41, 0.59):                                   # occhi
+        if ((x - ox) / 0.045) ** 2 + ((y - 0.37) / 0.065) ** 2 <= 1:
+            return 2
+    if ((x - cx) / 0.04) ** 2 + ((y - 0.52) / 0.05) ** 2 <= 1:   # bocca "oh"
+        return 2
+    if (x - cx) ** 2 + (y - testa) ** 2 <= raggio ** 2:
+        return 1
+    if testa <= y <= 0.95:                                     # lenzuolo che si allarga in basso
+        meta = raggio * (1 + 0.28 * (y - testa) / (0.95 - testa))
+        if abs(x - cx) <= meta:
+            fondo = 0.86 + 0.05 * math.sin((x - (cx - meta)) / (2 * meta) * 2.5 * 2 * math.pi + 0.6)
+            if y <= fondo:
+                return 1
+    return 0
+
+def sfondo(percorso):
+    L, A = 1920, 1080
+    alto, basso = (0x24, 0x14, 0x3a), (0x08, 0x06, 0x12)
+    lato = 300                                                 # il fantasma, in basso a destra
+    gx, gy = L - lato - 140, A - lato - 120
+    pixel = []
+    for y in range(A):
+        riga = bytearray()
+        fy = y / (A - 1)
+        for x in range(L):
+            fx = x / (L - 1)
+            t = fx * 0.35 + fy * 0.65
+            c = [alto[i] + (basso[i] - alto[i]) * t for i in range(3)]
+            d2 = ((fx - 0.22) * L / A) ** 2 + (fy - 0.25) ** 2      # alone viola
+            if d2 < 1.0:
+                k = 0.35 * math.exp(-4.0 * d2)
+                c = [c[i] + ((0x61, 0x35, 0x83)[i] - c[i]) * k for i in range(3)]
+            if gx <= x < gx + lato and gy <= y < gy + lato:
+                v = dentro_fantasma((x - gx) / lato, (y - gy) / lato)
+                if v == 1:
+                    c = [c[i] + ((0xc0, 0xb0, 0xe8)[i] - c[i]) * 0.18 for i in range(3)]
+            s = ((x * 7 + y * 13) & 3) * 0.25 - 0.375
+            riga += bytes(min(255, max(0, int(v + s + 0.5))) for v in c)
+        pixel.append(riga)
+    png(percorso, L, A, pixel, False)
+
+def icona(percorso, lato):
+    campioni = 4                                               # bordi morbidi
+    pixel = []
+    for y in range(lato):
+        riga = bytearray()
+        for x in range(lato):
+            corpo = occhi = 0
+            for sy in range(campioni):
+                for sx in range(campioni):
+                    v = dentro_fantasma((x + (sx + 0.5) / campioni) / lato, (y + (sy + 0.5) / campioni) / lato)
+                    corpo += v == 1
+                    occhi += v == 2
+            n = campioni * campioni
+            a = (corpo + occhi) / n
+            if a == 0:
+                riga += bytes((0, 0, 0, 0))
+                continue
+            k = occhi / (corpo + occhi)
+            c = [int((0xf0, 0xec, 0xff)[i] * (1 - k) + (0x2a, 0x1a, 0x45)[i] * k) for i in range(3)]
+            riga += bytes(c + [int(a * 255)])
+        pixel.append(riga)
+    png(percorso, lato, lato, pixel, True)
+
+if __name__ == "__main__":
+    if sys.argv[1:2] == ["sfondo"]:
+        sfondo(sys.argv[2])
+    elif sys.argv[1:2] == ["icona"]:
+        icona(sys.argv[2], int(sys.argv[3]))
+    else:
+        sys.exit("Uso: disegna-fantasma sfondo FILE | icona FILE LATO")

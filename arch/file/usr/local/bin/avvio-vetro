@@ -1,0 +1,20 @@
+#!/bin/bash
+# Programmi che partono insieme al desktop Vetro (creato da lfs.sh, Fase 10).
+# Lo lancia Hyprland (exec-once in /etc/xdg/hypr/vetro.conf).
+export PATH="/usr/local/bin:$PATH"
+# all'accesso: tasti spenti finche' non scrivi la password (prima di tutto il resto)
+if [ "${VETRO_ACCESSO:-}" = 1 ] && [ ! -e "${XDG_RUNTIME_DIR:-/tmp}/vetro-sbloccato" ]; then
+    hyprctl dispatch submap vetro-accesso >/dev/null 2>&1
+fi
+[ -x /usr/local/bin/avvia-audio ] && /usr/local/bin/avvia-audio >/dev/null 2>&1 &
+[ -x /usr/local/bin/guardiano-avvisi ] && /usr/local/bin/guardiano-avvisi >/dev/null 2>&1 &
+[ -x /usr/local/bin/benvenuto ] && /usr/local/bin/benvenuto >/dev/null 2>&1 &
+# per capire i problemi: cosa vede Hyprland poco dopo l'avvio (mouse e tastiere,
+# pannelli, finestre, plugin). Lo raccoglie "sudo ./lfs.sh registri" dal tuo PC.
+( sleep 25
+  { echo "== $(date '+%F %T')"
+    for c in version monitors devices layers clients workspaces cursorpos "plugin list"; do
+      echo; echo "== hyprctl $c"; hyprctl $c
+    done
+  } > "$HOME/.cache/vetro-diagnosi.txt" 2>&1 ) &
+exec /usr/local/bin/avvia-pannelli

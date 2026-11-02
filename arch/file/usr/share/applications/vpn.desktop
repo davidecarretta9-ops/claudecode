@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=VPN
+Comment=Nascondi il tuo indirizzo IP: accendi, spegni o configura la VPN
+Exec=/usr/local/bin/vpn
+Icon=network-vpn
+Terminal=false
+Categories=Network;Security;

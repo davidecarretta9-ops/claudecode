@@ -1,0 +1,112 @@
+#!/bin/bash
+# Firewall (creato da lfs.sh, partendo dall'esempio "Personal Firewall" del libro BLFS)
+#  - in ENTRATA passano solo le risposte a cio' che hai chiesto tu (piu' DHCP e IPv6 di base):
+#    nessuno da fuori puo' collegarsi al tuo computer
+#  - in USCITA i programmi del tuo utente passano dal Guardiano della rete, che ti chiede
+#    il permesso; i servizi del sistema (rete, orologio, DNS) escono normalmente
+#  - catena VPN: con la VPN sempre accesa i tuoi programmi escono SOLO dalla VPN
+#  - MODALITA' FANTASMA (se accesa): TUTTO esce solo da Tor. I collegamenti dei programmi
+#    vengono girati dentro Tor, i nomi dei siti li risolve Tor, il resto (UDP, IPv6,
+#    rete locale, orologio) e' bloccato. Esce direttamente solo Tor stesso.
+set -e
+UTENTI=1000-59999
+SEMPRE=/etc/wireguard/sempre-accesa
+FANTASMA=/etc/fantasma/attivo
+
+regole() { # 4 oppure 6
+  echo '*filter'
+  echo ':INPUT DROP [0:0]'
+  echo ':FORWARD DROP [0:0]'
+  echo ':OUTPUT ACCEPT [0:0]'
+  echo ':VPN - [0:0]'
+  echo '-A INPUT -i lo -j ACCEPT'
+  echo '-A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT'
+  if [ "$1" = 4 ]; then
+    echo '-A INPUT -p udp --sport 67 --dport 68 -j ACCEPT'
+  else
+    echo '-A INPUT -p ipv6-icmp -j ACCEPT'
+    echo '-A INPUT -s fe80::/10 -p udp --dport 546 -j ACCEPT'
+  fi
+  echo '-A OUTPUT -o lo -j ACCEPT'
+  echo '-A OUTPUT -j VPN'
+  echo '-A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT'
+  echo "-A OUTPUT -m owner --uid-owner $UTENTI -j NFQUEUE --queue-num 0"
+  if [ -e "$SEMPRE" ]; then
+    echo "-A VPN -m owner --uid-owner $UTENTI ! -o vpn -j REJECT"
+  fi
+  echo 'COMMIT'
+}
+
+regole_fantasma() { # 4 oppure 6: esce solo Tor
+  echo '*filter'
+  echo ':INPUT DROP [0:0]'
+  echo ':FORWARD DROP [0:0]'
+  echo ':OUTPUT DROP [0:0]'
+  echo ':VPN - [0:0]'
+  echo '-A INPUT -i lo -j ACCEPT'
+  echo '-A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT'
+  [ "$1" = 4 ] && echo '-A INPUT -p udp --sport 67 --dport 68 -j ACCEPT'
+  # pacchetti "fuori posto" (es. dopo un collegamento chiuso): mai fuori da Tor
+  echo '-A OUTPUT -m conntrack --ctstate INVALID -j DROP'
+  echo '-A OUTPUT -o lo -j ACCEPT'
+  if [ "$1" = 4 ]; then
+    # i collegamenti girati dentro Tor: qui la scheda risulta ancora quella di uscita
+    # (il kernel decide "-o" prima del giro), per questo si guarda la destinazione
+    echo '-A OUTPUT -d 127.0.0.1/32 -p tcp --dport 9040 -j ACCEPT'
+    echo '-A OUTPUT -d 127.0.0.1/32 -p udp --dport 9053 -j ACCEPT'
+    echo '-A OUTPUT -m owner --uid-owner tor -j ACCEPT'
+    echo '-A OUTPUT -p udp --dport 67 -m owner --uid-owner systemd-network -j ACCEPT'
+  fi
+  # pacchetti del kernel senza programma (la VPN WireGuard, se accesa, porta Tor dentro la VPN)
+  echo '-A OUTPUT -m owner ! --socket-exists -j ACCEPT'
+  echo '-A OUTPUT -j REJECT'
+  echo 'COMMIT'
+}
+
+nat_fantasma() { # i collegamenti TCP e i nomi dei siti vanno dentro Tor
+  echo '*nat'
+  echo ':PREROUTING ACCEPT [0:0]'
+  echo ':INPUT ACCEPT [0:0]'
+  echo ':OUTPUT ACCEPT [0:0]'
+  echo ':POSTROUTING ACCEPT [0:0]'
+  echo '-A OUTPUT -m owner --uid-owner tor -j RETURN'
+  echo '-A OUTPUT -o lo -j RETURN'
+  echo '-A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports 9053'
+  echo '-A OUTPUT -p tcp --syn -j REDIRECT --to-ports 9040'
+  echo 'COMMIT'
+}
+
+applica() {
+  if [ -e "$FANTASMA" ]; then
+    nat_fantasma | iptables-restore
+    regole_fantasma 4 | iptables-restore
+    regole_fantasma 6 | ip6tables-restore
+    # il Guardiano chiede anche in modalita' fantasma (prima che il collegamento entri in Tor)
+    iptables -t mangle -F OUTPUT
+    iptables -t mangle -A OUTPUT ! -o lo -m owner --uid-owner "$UTENTI" -m conntrack --ctstate NEW \
+             -p tcp --syn -j NFQUEUE --queue-num 0
+    iptables -t mangle -A OUTPUT ! -o lo -m owner --uid-owner "$UTENTI" -m conntrack --ctstate NEW \
+             -p udp --dport 53 -j NFQUEUE --queue-num 0
+  else
+    regole 4 | iptables-restore
+    regole 6 | ip6tables-restore
+    iptables -t nat -F OUTPUT 2>/dev/null || true
+    iptables -t mangle -F OUTPUT 2>/dev/null || true
+  fi
+}
+
+case "${1:-avvia}" in
+  avvia)
+    applica ;;
+  prova)
+    regole 4 | iptables-restore --test
+    regole 6 | ip6tables-restore --test
+    if [ -e "$FANTASMA" ]; then
+      nat_fantasma | iptables-restore --test
+      regole_fantasma 4 | iptables-restore --test
+      regole_fantasma 6 | ip6tables-restore --test
+    fi
+    echo "Regole del firewall corrette" ;;
+  mostra)
+    if [ -e "$FANTASMA" ]; then nat_fantasma; regole_fantasma "${2:-4}"; else regole "${2:-4}"; fi ;;
+esac

@@ -1,0 +1,10 @@
+#!/bin/sh
+# Dentro il recinto dei programmi Windows (creato da lfs.sh): un indirizzo web
+# (solo http/https) viene passato fuori e si apre nel browser. Nient'altro esce.
+cartella="${XDG_RUNTIME_DIR:-/tmp}/wine-recinto/link"
+case "$1" in
+  http://*|https://*) ;;
+  *) echo "Dal recinto si aprono solo indirizzi web (http/https)" >&2; exit 1 ;;
+esac
+f=$(mktemp "$cartella/XXXXXXXX.tmp") || exit 1
+printf '%s\n' "$1" > "$f" && mv "$f" "${f%.tmp}.url"

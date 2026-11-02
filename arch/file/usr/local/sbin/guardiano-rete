@@ -1,0 +1,427 @@
+#!/usr/bin/python3 -I
+# Guardiano della rete (creato da lfs.sh).
+# Prima che un programma del tuo utente si colleghi a internet per la prima volta,
+# il collegamento viene fermato e nel desktop compare la domanda: Permetti o Blocca.
+# Le risposte "sempre" restano in /etc/guardiano-rete/regole.
+# Gira come root (servizio guardiano-rete); le finestre le mostra "guardiano-avvisi".
+import errno, json, os, socket, struct, sys, threading, time
+
+CODA = int(os.environ.get("GUARDIANO_CODA", "0"))
+CARTELLA = os.environ.get("GUARDIANO_CARTELLA", "/etc/guardiano-rete")
+REGOLE = os.path.join(CARTELLA, "regole")
+PRESA = os.environ.get("GUARDIANO_PRESA", "/run/guardiano-rete.sock")
+GRUPPO = os.environ.get("GUARDIANO_GRUPPO", "wheel")
+# i soli due programmi che possono rispondere (devono partire con "python3 -I")
+AMMESSI = os.environ.get("GUARDIANO_AMMESSI",
+                         "/usr/local/bin/guardiano-avvisi:/usr/local/bin/guardiano-regole").split(":")
+ATTESA = 60            # secondi per rispondere, poi il collegamento resta bloccato
+PAUSA = 600            # dopo "Blocca per ora" (o nessuna risposta) non richiede per 10 minuti
+
+# --- netlink / NFQUEUE (linux/netfilter/nfnetlink_queue.h) ---
+NETLINK_NETFILTER = 12
+NFNL_SUBSYS_QUEUE = 3
+MSG_PACKET, MSG_VERDICT, MSG_CONFIG = 0, 1, 2
+CFG_CMD, CFG_PARAMS, CFG_MASK, CFG_FLAGS = 1, 2, 4, 5
+CMD_BIND = 1
+COPY_PACKET = 2
+A_PACKET_HDR, A_VERDICT_HDR, A_PAYLOAD, A_UID = 1, 2, 10, 16
+F_UID_GID = 0x08
+NLM_F_REQUEST, NLM_F_ACK = 0x1, 0x4
+NLMSG_ERROR = 2
+NF_DROP, NF_ACCEPT = 0, 1
+
+def attr(tipo, dati):
+    lun = 4 + len(dati)
+    return struct.pack("=HH", lun, tipo) + dati + b"\0" * ((4 - lun % 4) % 4)
+
+class Coda:
+    def __init__(self, numero):
+        self.numero = numero
+        self.s = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, NETLINK_NETFILTER)
+        self.s.bind((0, 0))
+        self.s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 4 << 20)
+        self.seq = 0
+        self.blocco = threading.Lock()
+        self._invia(MSG_CONFIG, socket.AF_UNSPEC, attr(CFG_CMD, struct.pack("!BBH", CMD_BIND, 0, 0)), NLM_F_ACK)
+        self._invia(MSG_CONFIG, socket.AF_UNSPEC,
+                    attr(CFG_PARAMS, struct.pack("!IB", 512, COPY_PACKET))
+                    + attr(CFG_FLAGS, struct.pack("!I", F_UID_GID))
+                    + attr(CFG_MASK, struct.pack("!I", F_UID_GID)), NLM_F_ACK)
+
+    def _invia(self, msg, famiglia, attributi, flag=0):
+        with self.blocco:
+            self.seq += 1
+            corpo = struct.pack("!BBH", famiglia, 0, self.numero) + attributi
+            testa = struct.pack("=IHHII", 16 + len(corpo), (NFNL_SUBSYS_QUEUE << 8) | msg,
+                                NLM_F_REQUEST | flag, self.seq, 0)
+            self.s.send(testa + corpo)
+
+    def verdetto(self, ident, sentenza):
+        self._invia(MSG_VERDICT, socket.AF_UNSPEC, attr(A_VERDICT_HDR, struct.pack("!II", sentenza, ident)))
+
+    def pacchetti(self):
+        """Restituisce i pacchetti in arrivo: (id, famiglia, payload, uid)."""
+        while True:
+            try:
+                dati = self.s.recv(1 << 20)
+            except OSError as e:
+                if e.errno == errno.ENOBUFS:        # troppi pacchetti insieme: si va avanti
+                    continue
+                raise
+            pos = 0
+            while pos + 16 <= len(dati):
+                lun, tipo, _, _, _ = struct.unpack_from("=IHHII", dati, pos)
+                if lun < 16:
+                    break
+                if tipo == NLMSG_ERROR:
+                    err = struct.unpack_from("=i", dati, pos + 16)[0]
+                    if err != 0:
+                        print("Errore dal kernel (netlink):", os.strerror(-err), flush=True)
+                elif tipo == (NFNL_SUBSYS_QUEUE << 8) | MSG_PACKET:
+                    famiglia = dati[pos + 16]
+                    p = pos + 20
+                    ident, payload, uid = None, b"", None
+                    while p + 4 <= pos + lun:
+                        alun, atipo = struct.unpack_from("=HH", dati, p)
+                        if alun < 4:
+                            break
+                        valore = dati[p + 4:p + alun]
+                        atipo &= 0x3fff
+                        if atipo == A_PACKET_HDR:
+                            ident = struct.unpack_from("!I", valore)[0]
+                        elif atipo == A_PAYLOAD:
+                            payload = bytes(valore)
+                        elif atipo == A_UID:
+                            uid = struct.unpack_from("!I", valore)[0]
+                        p += (alun + 3) & ~3
+                    if ident is not None:
+                        yield ident, famiglia, payload, uid
+                pos += (lun + 3) & ~3
+
+# --- chi sta parlando: dal pacchetto al programma ---
+def leggi_pacchetto(famiglia, b):
+    """-> (protocollo, porta_locale, indirizzo_remoto, porta_remota) oppure None"""
+    try:
+        if famiglia == socket.AF_INET:
+            ihl = (b[0] & 0x0F) * 4
+            proto, remoto, l4 = b[9], socket.inet_ntop(socket.AF_INET, b[16:20]), b[ihl:]
+        elif famiglia == socket.AF_INET6:
+            proto, remoto, l4 = b[6], socket.inet_ntop(socket.AF_INET6, b[24:40]), b[40:]
+        else:
+            return None
+        if proto not in (6, 17) or len(l4) < 4:
+            return None
+        sport, dport = struct.unpack("!HH", l4[:4])
+        return ("tcp" if proto == 6 else "udp"), sport, remoto, dport
+    except (IndexError, ValueError, struct.error):
+        return None
+
+def inode_presa(proto, famiglia, porta_locale, porta_remota):
+    file = [f"/proc/net/{proto}6"] if famiglia == socket.AF_INET6 else [f"/proc/net/{proto}", f"/proc/net/{proto}6"]
+    di_riserva = None
+    for f in file:
+        try:
+            righe = open(f).read().splitlines()[1:]
+        except OSError:
+            continue
+        for r in righe:
+            c = r.split()
+            if len(c) < 10:
+                continue
+            if int(c[1].rsplit(":", 1)[1], 16) != porta_locale:
+                continue
+            inode = int(c[9])
+            if inode == 0:
+                continue
+            if int(c[2].rsplit(":", 1)[1], 16) == porta_remota:
+                return inode
+            di_riserva = di_riserva or inode
+    return di_riserva
+
+def processo_della_presa(inode):
+    cerca = f"socket:[{inode}]"
+    for pid in os.listdir("/proc"):
+        if not pid.isdigit():
+            continue
+        try:
+            for fd in os.listdir(f"/proc/{pid}/fd"):
+                try:
+                    if os.readlink(f"/proc/{pid}/fd/{fd}") == cerca:
+                        return int(pid)
+                except OSError:
+                    pass
+        except OSError:
+            pass
+    return None
+
+INTERPRETI = ("python", "python3", "bash", "sh", "perl", "ruby", "node", "java", "lua", "luajit")
+WINE = ("wine", "wine64", "wine-preloader", "wine64-preloader")
+
+def manomesso(pid):
+    """Un programma "permesso" fatto partire con codice infilato dentro (LD_PRELOAD...)
+    o controllato da un altro programma non vale come quello vero: si chiede di nuovo."""
+    try:
+        ambiente = open(f"/proc/{pid}/environ", "rb").read().split(b"\0")
+        controllato = [r for r in open(f"/proc/{pid}/status") if r.startswith("TracerPid:")]
+    except OSError:
+        return ""
+    if any(v.startswith((b"LD_PRELOAD=", b"LD_AUDIT=")) and len(v.split(b"=", 1)[1]) > 0 for v in ambiente):
+        return " [con codice aggiunto: LD_PRELOAD]"
+    if controllato and controllato[0].split()[1] != "0":
+        return " [controllato da un altro programma]"
+    return ""
+
+def descrivi_processo(pid):
+    """-> (chiave della regola, nome da mostrare, percorso del programma)"""
+    d = descrivi_processo_base(pid)
+    if d is None:
+        return None
+    extra = manomesso(pid)
+    return (d[0] + extra, d[1] + extra, d[2]) if extra else d
+
+def descrivi_processo_base(pid):
+    try:
+        exe = os.readlink(f"/proc/{pid}/exe")
+    except OSError:
+        return None
+    if exe.endswith(" (deleted)"):
+        exe = exe[:-10]
+    try:
+        argomenti = [a for a in open(f"/proc/{pid}/cmdline", "rb").read().decode(errors="replace").split("\0") if a]
+    except OSError:
+        argomenti = []
+    base = os.path.basename(exe)
+    if base in WINE or "/wine/" in exe:
+        prog = argomenti[0] if argomenti else exe
+        return "wine:" + prog, prog.replace("\\", "/").rsplit("/", 1)[-1] + " (Windows)", prog
+    nome_base = base.rstrip("0123456789.")
+    if nome_base in INTERPRETI:
+        script = next((a for a in argomenti[1:] if not a.startswith("-")), "")
+        if script:
+            return exe + " " + script, os.path.basename(script), exe + " " + script
+    return exe, base, exe
+
+# --- regole ---
+class Regole:
+    def __init__(self):
+        self.sempre = {}            # chiave -> "permetti" / "blocca"
+        self.ora = {}               # chiave -> ("permetti", None) fino al riavvio, ("blocca", scadenza)
+        try:
+            for r in open(REGOLE):
+                r = r.rstrip("\n")
+                if "\t" in r and not r.startswith("#"):
+                    scelta, chiave = r.split("\t", 1)
+                    if scelta in ("permetti", "blocca"):
+                        self.sempre[chiave] = scelta
+        except OSError:
+            pass
+
+    def decisione(self, chiave):
+        if chiave in self.ora:
+            scelta, scadenza = self.ora[chiave]
+            if scadenza is None or time.time() < scadenza:
+                return scelta
+            del self.ora[chiave]
+        return self.sempre.get(chiave)
+
+    def salva(self):
+        os.makedirs(CARTELLA, exist_ok=True)
+        tmp = REGOLE + ".nuovo"
+        with open(tmp, "w") as f:
+            f.write("# Regole del Guardiano della rete: permetti/blocca <TAB> programma\n")
+            for chiave in sorted(self.sempre):
+                f.write(f"{self.sempre[chiave]}\t{chiave}\n")
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, REGOLE)
+
+# --- il guardiano ---
+class Guardiano:
+    def __init__(self, coda):
+        self.coda = coda
+        self.regole = Regole()
+        self.blocco = threading.RLock()
+        self.attesa = {}            # chiave -> {"id": n, "pacchetti": [...], "da": tempo}
+        self.domande = 0
+        self.avvisi = None          # connessione con guardiano-avvisi (o None)
+
+    def scrivi(self, conn, oggetto):
+        try:
+            conn.sendall((json.dumps(oggetto) + "\n").encode())
+            return True
+        except OSError:
+            return False
+
+    def pacchetto(self, ident, famiglia, payload, uid):
+        info = leggi_pacchetto(famiglia, payload)
+        if info is None:
+            self.coda.verdetto(ident, NF_ACCEPT)        # ICMP e altro: non sono programmi da controllare
+            return
+        proto, plocale, remoto, premota = info
+        descr = None
+        inode = inode_presa(proto, famiglia, plocale, premota)
+        if inode:
+            pid = processo_della_presa(inode)
+            if pid:
+                descr = descrivi_processo(pid)
+        if descr is None:
+            descr = (f"sconosciuto:uid {uid}", f"programma sconosciuto (utente {uid})", "?")
+        chiave, nome, percorso = descr
+        with self.blocco:
+            d = self.regole.decisione(chiave)
+            if d:
+                self.coda.verdetto(ident, NF_ACCEPT if d == "permetti" else NF_DROP)
+                return
+            if chiave in self.attesa:
+                self.attesa[chiave]["pacchetti"].append(ident)
+                return
+            if self.avvisi is None:
+                self.coda.verdetto(ident, NF_DROP)      # nessuno puo' rispondere: bloccato
+                return
+            self.domande += 1
+            self.attesa[chiave] = {"id": self.domande, "pacchetti": [ident], "da": time.time()}
+            domanda = {"domanda": self.domande, "chiave": chiave, "nome": nome, "programma": percorso,
+                       "indirizzo": remoto, "porta": premota, "protocollo": proto}
+            if not self.scrivi(self.avvisi, domanda):
+                self.chiudi_avvisi()
+
+    def rispondi(self, numero, scelta):
+        with self.blocco:
+            chiave = next((k for k, v in self.attesa.items() if v["id"] == numero), None)
+            if chiave is None:
+                return
+            v = self.attesa.pop(chiave)
+            permetti = scelta in ("permetti_sempre", "permetti_ora")
+            if scelta == "permetti_sempre":
+                self.regole.sempre[chiave] = "permetti"; self.regole.salva()
+            elif scelta == "blocca_sempre":
+                self.regole.sempre[chiave] = "blocca"; self.regole.salva()
+            elif scelta == "permetti_ora":
+                self.regole.ora[chiave] = ("permetti", None)
+            else:                                   # "blocca_ora" o nessuna risposta
+                self.regole.ora[chiave] = ("blocca", time.time() + PAUSA)
+            for ident in v["pacchetti"]:
+                self.coda.verdetto(ident, NF_ACCEPT if permetti else NF_DROP)
+
+    def scadenze(self):
+        while True:
+            time.sleep(1)
+            with self.blocco:
+                for chiave in [k for k, v in self.attesa.items() if time.time() - v["da"] > ATTESA + 5]:
+                    for ident in self.attesa.pop(chiave)["pacchetti"]:
+                        self.coda.verdetto(ident, NF_DROP)
+                    self.regole.ora[chiave] = ("blocca", time.time() + PAUSA)
+
+    def chiudi_avvisi(self):
+        with self.blocco:
+            if self.avvisi is not None:
+                try:
+                    self.avvisi.close()
+                except OSError:
+                    pass
+            self.avvisi = None
+            for v in self.attesa.values():          # nessuno risponde piu': bloccati
+                for ident in v["pacchetti"]:
+                    self.coda.verdetto(ident, NF_DROP)
+            self.attesa.clear()
+
+    def autentico(self, conn):
+        """Solo i veri guardiano-avvisi e guardiano-regole (la presa e' gia' riservata al
+        gruppo wheel): python3 di sistema in modo isolato (-I, niente moduli dell'utente),
+        senza librerie infilate (LD_PRELOAD...) e senza un altro programma che lo controlla."""
+        if os.environ.get("GUARDIANO_PROVA"):
+            return True
+        pid, uid, gid = struct.unpack("3i", conn.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
+        try:
+            argomenti = open(f"/proc/{pid}/cmdline", "rb").read().split(b"\0")
+            exe = os.readlink(f"/proc/{pid}/exe")
+            ambiente = open(f"/proc/{pid}/environ", "rb").read().split(b"\0")
+            controllato = [r for r in open(f"/proc/{pid}/status") if r.startswith("TracerPid:")]
+        except OSError:
+            return False
+        if os.path.dirname(exe) not in ("/usr/bin", "/usr/local/bin") \
+                or not os.path.basename(exe).startswith("python3"):
+            return False
+        if len(argomenti) < 3 or argomenti[1] != b"-I" \
+                or argomenti[2].decode(errors="replace") not in AMMESSI:
+            return False
+        if any(v.startswith((b"LD_PRELOAD=", b"LD_LIBRARY_PATH=", b"LD_AUDIT=")) for v in ambiente):
+            return False
+        return bool(controllato) and controllato[0].split()[1] == "0"
+
+    def servi(self, conn):
+        if not self.autentico(conn):
+            conn.close(); return
+        e_avvisi = False
+        resto = b""
+        try:
+            while True:
+                dati = conn.recv(65536)
+                if not dati:
+                    break
+                resto += dati
+                while b"\n" in resto:
+                    riga, resto = resto.split(b"\n", 1)
+                    try:
+                        m = json.loads(riga)
+                    except ValueError:
+                        continue
+                    if m.get("ciao") == "avvisi":
+                        with self.blocco:
+                            if self.avvisi is not None:
+                                self.chiudi_avvisi()
+                            self.avvisi = conn; e_avvisi = True
+                    elif "risposta" in m:
+                        self.rispondi(int(m["risposta"]), str(m.get("scelta")))
+                    elif m.get("comando") == "regole":
+                        with self.blocco:
+                            elenco = sorted(self.regole.sempre.items())
+                        self.scrivi(conn, {"regole": elenco})
+                    elif m.get("comando") == "elimina":
+                        with self.blocco:
+                            self.regole.sempre.pop(str(m.get("chiave")), None)
+                            self.regole.ora.pop(str(m.get("chiave")), None)
+                            self.regole.salva()
+                        self.scrivi(conn, {"fatto": True})
+        except OSError:
+            pass
+        finally:
+            if e_avvisi:
+                with self.blocco:
+                    if self.avvisi is conn:
+                        self.chiudi_avvisi()
+            else:
+                conn.close()
+
+    def ascolta(self):
+        try:
+            os.unlink(PRESA)
+        except FileNotFoundError:
+            pass
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.bind(PRESA)
+        try:
+            import grp
+            os.chown(PRESA, 0, grp.getgrnam(GRUPPO).gr_gid)
+        except (KeyError, PermissionError):
+            pass
+        os.chmod(PRESA, 0o660)
+        s.listen(5)
+        while True:
+            conn, _ = s.accept()
+            threading.Thread(target=self.servi, args=(conn,), daemon=True).start()
+
+def main():
+    coda = Coda(CODA)
+    g = Guardiano(coda)
+    threading.Thread(target=g.ascolta, daemon=True).start()
+    threading.Thread(target=g.scadenze, daemon=True).start()
+    print(f"Guardiano della rete attivo (coda {CODA}, {len(g.regole.sempre)} regole)", flush=True)
+    for ident, famiglia, payload, uid in coda.pacchetti():
+        try:
+            g.pacchetto(ident, famiglia, payload, uid)
+        except Exception as e:          # mai lasciare un pacchetto senza risposta
+            print("Errore:", e, flush=True)
+            coda.verdetto(ident, NF_DROP)
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,14 @@
+[Unit]
+Description=Modalita' fantasma: nome del computer e identificativo nascosti (lfs.sh)
+DefaultDependencies=no
+After=local-fs.target
+Before=network-pre.target systemd-networkd.service dbus.service sysinit.target
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/fantasma-aiuto avvio
+
+[Install]
+WantedBy=sysinit.target
