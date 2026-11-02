@@ -9880,16 +9880,16 @@ fi
 
 case "$(sudo -n "$AIUTO" stato 2>/dev/null)" in
   acceso)
+    # subito il pulsante per spegnerla, anche se Tor non si e' ancora collegato (prima
+    # si aspettava Tor fino a 3 minuti e sembrava che non si potesse spegnere)
     if sudo -n "$AIUTO" pronto; then
-      finestra --image fantasma --button "Spegni:2" --button "Chiudi:0" \
-               --text "<b>La modalità fantasma è accesa.</b>  Tutto passa da Tor."
-      [ $? -eq 2 ] && spegni
+      testo="<b>La modalità fantasma è accesa.</b>  Tutto passa da Tor."
     else
-      attendi_tor
-      sudo -n "$AIUTO" pronto || finestra --image dialog-warning --button "Spegni:2" --button "Aspetta:0" \
-        --text "<b>Tor non si è ancora collegato</b>: internet resta bloccato finché non si collega."
-      [ $? -eq 2 ] && spegni
-    fi ;;
+      testo="<b>La modalità fantasma è accesa</b>, ma Tor non si è ancora collegato:
+internet resta bloccato finché non si collega."
+    fi
+    finestra --image fantasma --button "Spegni:2" --button "Chiudi:0" --text "$testo"
+    [ $? -eq 2 ] && spegni ;;
   spento)
     finestra --image fantasma --button "Annulla:1" --button "Accendi:0" --text "<b>Modalità fantasma</b>
 
@@ -15488,22 +15488,8 @@ FloatingWindow {
                     anchors.margins: 14
                     spacing: 8
 
-                    // i tre pulsanti tondi e lo spostamento della finestra
-                    Item {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 26
-                        MouseArea {
-                            anchors.fill: parent
-                            onPressed: finestra.startSystemMove()
-                        }
-                        Row {
-                            spacing: 8
-                            anchors.verticalCenter: parent.verticalCenter
-                            Semaforo { colore: Tema.rosso; segno: "close"; onCliccato: Stato.impostazioni = false }
-                            Semaforo { colore: Tema.giallo; segno: "remove"; onCliccato: Finestre.riduciAttiva() }
-                            Semaforo { colore: Tema.verde; segno: "add"; onCliccato: Hyprland.dispatch("fullscreen 1") }
-                        }
-                    }
+                    // (i tre pulsanti tondi e lo spostamento: li ha la barra del titolo
+                    // delle finestre, quella del plugin hyprbars)
 
                     // chi sei
                     RowLayout {
@@ -18520,6 +18506,18 @@ if vecchio in s:
 EOF
 grep -q 'Non riesco a spegnere la modalit' /usr/local/bin/fantasma \
   || { echo "Non riesco a correggere /usr/local/bin/fantasma"; return 1; }
+# - modalita' fantasma: il pulsante "Spegni" subito, senza aspettare che Tor si colleghi
+python3 -I - /usr/local/bin/fantasma << "EOF"
+import sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+vecchio = '  acceso)\n    if sudo -n "$AIUTO" pronto; then\n      finestra --image fantasma --button "Spegni:2" --button "Chiudi:0" \\\n               --text "<b>La modalità fantasma è accesa.</b>  Tutto passa da Tor."\n      [ $? -eq 2 ] && spegni\n    else\n      attendi_tor\n      sudo -n "$AIUTO" pronto || finestra --image dialog-warning --button "Spegni:2" --button "Aspetta:0" \\\n        --text "<b>Tor non si è ancora collegato</b>: internet resta bloccato finché non si collega."\n      [ $? -eq 2 ] && spegni\n    fi ;;\n'
+if vecchio in s:
+    open(p, "w", encoding="utf-8").write(s.replace(vecchio, '  acceso)\n    # subito il pulsante per spegnerla, anche se Tor non si e\' ancora collegato (prima\n    # si aspettava Tor fino a 3 minuti e sembrava che non si potesse spegnere)\n    if sudo -n "$AIUTO" pronto; then\n      testo="<b>La modalità fantasma è accesa.</b>  Tutto passa da Tor."\n    else\n      testo="<b>La modalità fantasma è accesa</b>, ma Tor non si è ancora collegato:\ninternet resta bloccato finché non si collega."\n    fi\n    finestra --image fantasma --button "Spegni:2" --button "Chiudi:0" --text "$testo"\n    [ $? -eq 2 ] && spegni ;;\n', 1))
+    print("modalita' fantasma: Spegni subito")
+EOF
+grep -q 'subito il pulsante per spegnerla' /usr/local/bin/fantasma \
+  || { echo "Non riesco a correggere /usr/local/bin/fantasma (Spegni subito)"; return 1; }
 bash -n /usr/local/bin/fantasma
 fi
 # - modalita' fantasma accesa di serie: il suo programma impara "prepara" (scrive solo i
