@@ -1,0 +1,81 @@
+#!/bin/bash
+# Barre del titolo delle finestre (creato da vetro-arch.sh): compila il plugin hyprbars
+# per la versione di Hyprland installata, con lo stesso metodo di hyprpm (il file
+# hyprpm.toml degli autori dice quale versione del plugin va con quale Hyprland).
+# Lo lancia vetro-arch.sh e, dopo ogni aggiornamento di Hyprland, pacman (hook).
+#   vetro-barre-aggiorna                        compila e scrive /etc/xdg/hypr/vetro-barre.conf
+#   vetro-barre-aggiorna --commit-per VER FILE  solo il commit del plugin per Hyprland VER
+# Se qualcosa non va le barre mancano, ma non e' un errore: il desktop funziona lo stesso.
+set -euo pipefail
+RADICE=${VETRO_RADICE:-}
+CONF="$RADICE/etc/xdg/hypr/vetro-barre.conf"
+PLUGIN="$RADICE/usr/lib/hyprland-plugins/hyprbars.so"
+REPO=https://github.com/hyprwm/hyprland-plugins
+
+# commit_per VERSIONE FILE: il secondo commit della riga che finisce con "# VERSIONE"
+commit_per() {
+    local riga
+    riga=$(grep -E "\][[:space:]]*,?[[:space:]]*#[[:space:]]*${1//./\\.}[[:space:]]*$" "$2" | tail -n 1) || return 1
+    printf '%s\n' "$riga" | grep -oE '"[0-9a-f]{7,40}"' | sed -n '2p' | tr -d '"' | grep . || return 1
+}
+
+senza_barre() {
+    mkdir -p "$(dirname "$CONF")"
+    echo "# Barre del titolo: non ci sono ($1)" > "$CONF"
+    echo "[!!] Barre del titolo: $1" >&2
+    exit 0
+}
+
+if [ "${1:-}" = --commit-per ]; then
+    commit_per "$2" "$3"
+    exit
+fi
+
+versione=$(pacman -Q hyprland 2>/dev/null | awk '{print $2}' | cut -d- -f1)
+[ -n "$versione" ] || senza_barre "Hyprland non e' installato"
+t=$(mktemp -d)
+trap 'rm -rf "$t"' EXIT
+toml=${VETRO_HYPRPM_TOML:-}
+if [ -z "$toml" ]; then
+    curl -fsSL --retry 3 -o "$t/main.tar.gz" "$REPO/archive/refs/heads/main.tar.gz" \
+        || senza_barre "non riesco a scaricare l'elenco dei plugin"
+    tar -xzf "$t/main.tar.gz" -C "$t"
+    toml="$t/hyprland-plugins-main/hyprpm.toml"
+fi
+commit=$(commit_per "$versione" "$toml") \
+    || senza_barre "per Hyprland $versione gli autori non hanno ancora indicato la versione del plugin"
+curl -fsSL --retry 3 -o "$t/plugin.tar.gz" "$REPO/archive/$commit.tar.gz" \
+    || senza_barre "non riesco a scaricare il plugin"
+tar -xzf "$t/plugin.tar.gz" -C "$t"
+make -C "$t/hyprland-plugins-$commit/hyprbars" all >"$t/make.log" 2>&1 \
+    || { tail -n 20 "$t/make.log" >&2; senza_barre "il plugin non si compila"; }
+install -Dm755 "$t/hyprland-plugins-$commit/hyprbars/hyprbars.so" "$PLUGIN"
+cat > "$CONF" << "FINE"
+# Barre del titolo delle finestre (creato da vetro-arch.sh): plugin hyprbars, come GNOME.
+# Trascina la barra per spostare la finestra, doppio clic per ingrandirla.
+# Pulsanti a destra: chiudi, ingrandisci, riduci.
+# Per toglierle: in ~/.config/hypr/personale.conf scrivi  plugin:hyprbars:enabled = false
+plugin = /usr/lib/hyprland-plugins/hyprbars.so
+
+plugin {
+    hyprbars {
+        bar_height = 34
+        bar_color = rgba(303030ff)
+        col.text = rgba(ffffffde)
+        bar_text_size = 11
+        bar_text_align = center
+        bar_part_of_window = true
+        bar_precedence_over_border = true
+        bar_buttons_alignment = right
+        bar_padding = 10
+        bar_button_padding = 8
+        inactive_button_color = rgba(ffffff14)
+        on_double_click = hyprctl dispatch fullscreen 1
+        # colore, misura, simbolo, comando, colore del simbolo (il primo e' il piu' a destra)
+        hyprbars-button = rgba(ffffff26), 22, ✕, hyprctl dispatch killactive, rgba(ffffffde)
+        hyprbars-button = rgba(ffffff26), 22, □, hyprctl dispatch fullscreen 1, rgba(ffffffde)
+        hyprbars-button = rgba(ffffff26), 22, –, hyprctl dispatch global quickshell:riduci, rgba(ffffffde)
+    }
+}
+FINE
+echo "[OK] Barre del titolo pronte (plugin per Hyprland $versione)"

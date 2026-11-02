@@ -9,8 +9,14 @@ impronta() {
     {
         declare -f "$fn"
         for rel in "$@"; do
-            printf '== %s\n' "$rel"
-            cat "$VETRO_FILE/$rel" 2>/dev/null || true
+            if [ -d "$VETRO_FILE/$rel" ]; then
+                # una cartella: tutti i file dentro, in ordine, con il loro nome
+                (cd "$VETRO_FILE" && find "$rel" -type f | LC_ALL=C sort | while IFS= read -r f; do
+                    printf '== %s\n' "$f"; cat "$f"; done)
+            else
+                printf '== %s\n' "$rel"
+                cat "$VETRO_FILE/$rel" 2>/dev/null || true
+            fi
         done
     } | sha256sum | cut -d' ' -f1
 }

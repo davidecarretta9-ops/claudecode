@@ -819,17 +819,6 @@ FloatingWindow {
                     }
                 }
             }
-            Gruppo {
-                Riga {
-                    titolo: "Desktop classico"
-                    sottotitolo: "Al prossimo accesso torna il desktop di prima (labwc). Per tornare qui apri «Cambia desktop» tra le app"
-                    Pulsante {
-                        testo: "Usa il classico"
-                        icona: "swap_horiz"
-                        onCliccato: Quickshell.execDetached(["/usr/local/bin/scegli-desktop", "classico"])
-                    }
-                }
-            }
         }
     }
 

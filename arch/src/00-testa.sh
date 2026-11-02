@@ -40,8 +40,8 @@ controlla_arch() {
 # nelle prove si usano quelli finti, e un comando senza finto non parte mai
 esegui() {
     if [ -n "$VETRO_RADICE" ]; then
-        if [ -x "$VETRO_RADICE/.finti/$1" ]; then
-            "$VETRO_RADICE/.finti/$1" "${@:2}"
+        if [ -x "$VETRO_RADICE/.finti/${1##*/}" ]; then
+            "$VETRO_RADICE/.finti/${1##*/}" "${@:2}"
             return
         fi
         echo "prova: manca il comando finto per '$1'" >&2
@@ -59,5 +59,16 @@ installa_file() {
         dst=$(percorso "/$rel")
         [ -f "$src" ] || muori "Nello script manca il file $rel"
         install -D -m "$(stat -c %a "$src")" "$src" "$dst"
+    done
+}
+
+# installa_cartella REL...: come installa_file, per tutti i file di una cartella
+installa_cartella() {
+    local rel f
+    for rel in "$@"; do
+        [ -d "$VETRO_FILE/$rel" ] || muori "Nello script manca la cartella $rel"
+        while IFS= read -r f; do
+            installa_file "$f"
+        done < <(cd "$VETRO_FILE" && find "$rel" -type f | LC_ALL=C sort)
     done
 }

@@ -1,11 +1,12 @@
-// Il blocco schermo (creato da lfs.sh, Fase 10): orologio grande, saluto e la
+// Il blocco schermo (creato da vetro-arch.sh): orologio grande, saluto e la
 // password. Si blocca con Windows+L, dal centro di controllo o da solo dopo i minuti
-// scelti in Impostazioni (0 = mai). La password la controlla un piccolo aiutante
-// (/usr/local/libexec/vetro-password), perche' qui non c'e' Linux-PAM.
+// scelti in Impostazioni (0 = mai). La password la controlla il sistema (PAM, file
+// /etc/pam.d/vetro-blocco), come all'accesso.
 import QtQuick
 import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.Pam
 import Quickshell.Wayland
 
 Scope {
@@ -16,30 +17,39 @@ Scope {
     property int tentativi: 0
     signal sbagliata()
 
+    property string daDire: ""
+
     function verifica(password) {
         if (controllo || password === "") return;
         controllo = true;
         errore = "";
-        aiutante.daScrivere = password + "\n";
-        aiutante.running = true;
+        daDire = password;
+        if (!pam.start()) {
+            controllo = false;
+            daDire = "";
+            errore = "Non riesco a controllare la password";
+            sbagliata();
+        }
     }
 
-    Process {
-        id: aiutante
-        property string daScrivere: ""
-        command: ["/usr/local/libexec/vetro-password"]
-        stdinEnabled: true
-        onStarted: { write(daScrivere); daScrivere = ""; }
-        onExited: (codice, stato) => {
+    PamContext {
+        id: pam
+        config: "vetro-blocco"
+        onPamMessage: {
+            if (this.responseRequired) {
+                this.respond(blocco.daDire);
+                blocco.daDire = "";
+            }
+        }
+        onCompleted: risultato => {
             blocco.controllo = false;
-            if (codice === 0) {
+            blocco.daDire = "";
+            if (risultato === PamResult.Success) {
                 blocco.tentativi = 0;
                 Stato.bloccato = false;
-                // all'accesso: da adesso i tasti di Hyprland funzionano (vedi vetro.conf)
-                Quickshell.execDetached(["sh", "-c", "touch \"${XDG_RUNTIME_DIR:-/tmp}/vetro-sbloccato\"; hyprctl dispatch submap reset"]);
             } else {
                 blocco.tentativi++;
-                blocco.errore = codice === 1 ? "Password sbagliata" : "Non riesco a controllare la password";
+                blocco.errore = risultato === PamResult.Failed ? "Password sbagliata" : "Non riesco a controllare la password";
                 blocco.sbagliata();
             }
         }
@@ -222,18 +232,6 @@ Scope {
                         TastoBlocco { icona: "restart_alt"; onCliccato: Quickshell.execDetached(["sudo", "-n", "/usr/bin/systemctl", "reboot"]) }
                         TastoBlocco { icona: "arrow_forward"; onCliccato: blocco.verifica(password.text) }
                     }
-                }
-
-                // all'accesso: come entrare con un altro utente
-                Text {
-                    visible: Quickshell.env("VETRO_ACCESSO") === "1"
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 24
-                    text: "Altro utente (anche fantasma): Ctrl+Alt+F2"
-                    font.family: Tema.mono
-                    font.pixelSize: 12
-                    color: Qt.rgba(1, 1, 1, 0.5)
                 }
 
                 // in basso: notifiche e un po' di numeri

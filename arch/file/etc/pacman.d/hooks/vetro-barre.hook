@@ -1,0 +1,11 @@
+# vetro-arch.sh: dopo ogni aggiornamento di Hyprland ricompila le barre del titolo
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = hyprland
+
+[Action]
+Description = Barre del titolo (hyprbars) per la nuova versione di Hyprland
+When = PostTransaction
+Exec = /usr/local/bin/vetro-barre-aggiorna

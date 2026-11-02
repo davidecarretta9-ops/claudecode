@@ -1,0 +1,4 @@
+#%PAM-1.0
+# vetro-arch.sh: la password del blocco schermo, controllata come all'accesso
+auth include system-auth
+account include system-auth

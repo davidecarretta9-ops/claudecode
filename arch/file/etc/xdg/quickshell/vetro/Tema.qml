@@ -12,6 +12,7 @@ Singleton {
     readonly property real opacita: Math.max(0.25, Math.min(0.95, Opzioni.opacita))
 
     readonly property var temi: [
+        { id: "adwaita",    nome: "Adwaita",    fondo: "#242424", accento: "#3584e4" },
         { id: "ombra",      nome: "Ombra",      fondo: "#17171a", accento: "#ececf0" },
         { id: "grafite",    nome: "Grafite",    fondo: "#1d2024", accento: "#a9b4c2" },
         { id: "mezzanotte", nome: "Mezzanotte", fondo: "#14162a", accento: "#8c96ff" },
@@ -36,7 +37,7 @@ Singleton {
 
     readonly property color accento: attuale.accento
     readonly property color suAccento: (nome === "ombra" || nome === "grafite") ? "#121214" : "#ffffff"
-    readonly property color testo: chiaro ? "#1d1d1f" : "#f2f2f5"
+    readonly property color testo: chiaro ? "#1d1d1f" : (nome === "adwaita" ? "#ffffff" : "#f2f2f5")
     readonly property color testo2: chiaro ? "#55555c" : "#a6a6ae"
     readonly property color testo3: chiaro ? "#86868e" : "#6c6c75"
     readonly property color rosso: "#ff5f57"

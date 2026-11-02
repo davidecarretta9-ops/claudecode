@@ -28,7 +28,7 @@ test_ripresa_dopo_errore() {
     uno() { echo 1 >> "$RADICE/fatti"; }
     due() { [ -e "$RADICE/corretto" ] || return 1; echo 2 >> "$RADICE/fatti"; }
     tre() { echo 3 >> "$RADICE/fatti"; }
-    FASE1=("uno|uno|" "due|due|" "tre|tre|")
+    FASE1=("uno|uno|" "due|due|" "tre|tre|"); FASE2=(); FASE3=(); FASE4=()
     ( principale tutto ) >/dev/null 2>&1
     uguale "1" "$?" "con il secondo passo rotto lo script esce con 1"
     esiste "$VETRO_STATO/fatto/uno"
@@ -73,7 +73,31 @@ test_errore_a_meta() {
     non_esiste "$VETRO_STATO/fatto/prova"
 }
 
+test_impronta_cartella() {
+    radice_finta
+    local t; t=$(mktemp -d); export VETRO_FILE=$t
+    mkdir -p "$t/etc/x"; echo uno > "$t/etc/x/a"
+    fn() { :; }
+    local prima; prima=$(impronta fn etc/x)
+    echo due > "$t/etc/x/a"
+    if [ "$prima" != "$(impronta fn etc/x)" ]; then ok_prova "un file cambiato nella cartella cambia l'impronta"
+    else fallita "un file cambiato nella cartella cambia l'impronta"; fi
+}
+
+test_installa_cartella() {
+    radice_finta
+    local t; t=$(mktemp -d); export VETRO_FILE=$t
+    mkdir -p "$t/usr/local/bin" "$t/usr/local/bin/sotto"
+    printf 'x\n' > "$t/usr/local/bin/a"; chmod 755 "$t/usr/local/bin/a"
+    printf 'y\n' > "$t/usr/local/bin/sotto/b"; chmod 644 "$t/usr/local/bin/sotto/b"
+    installa_cartella usr/local/bin
+    uguale "755" "$(stat -c %a "$RADICE/usr/local/bin/a")" "permessi tenuti (755)"
+    uguale "y" "$(cat "$RADICE/usr/local/bin/sotto/b")" "anche le sottocartelle"
+}
+
 prova test_passo_una_volta
+prova test_impronta_cartella
+prova test_installa_cartella
 prova test_errore_a_meta
 prova test_impronta_cambiata
 prova test_ripresa_dopo_errore

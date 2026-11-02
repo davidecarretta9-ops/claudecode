@@ -51,7 +51,7 @@ Singleton {
 
         JsonAdapter {
             id: dati
-            property string tema: "ombra"
+            property string tema: "adwaita"
             property real opacita: 0.58
             property bool animazioni: true
             property bool sfocatura: true
