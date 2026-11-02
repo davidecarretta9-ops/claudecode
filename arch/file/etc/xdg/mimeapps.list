@@ -1,0 +1,14 @@
+# I programmi che aprono i file (creato da vetro-arch.sh). Ognuno puo' cambiarli in
+# ~/.config/mimeapps.list
+[Default Applications]
+text/html=tor-browser.desktop
+application/xhtml+xml=tor-browser.desktop
+x-scheme-handler/http=tor-browser.desktop
+x-scheme-handler/https=tor-browser.desktop
+application/pdf=tor-browser.desktop
+inode/directory=thunar.desktop
+text/plain=org.xfce.mousepad.desktop
+application/x-ms-dos-executable=wine.desktop
+application/x-msi=wine.desktop
+application/x-msdownload=wine.desktop
+application/vnd.microsoft.portable-executable=wine.desktop

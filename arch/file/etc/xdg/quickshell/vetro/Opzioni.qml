@@ -69,7 +69,7 @@ Singleton {
             property bool statisticheBlocco: true
             property string nomeMostrato: ""
             property list<string> preferite: [
-                "tor-browser", "firefox", "thunar", "thunderbird",
+                "tor-browser", "thunar", "thunderbird", "org.mozilla.Thunderbird",
                 "libreoffice-writer", "org.xfce.mousepad", "foot"
             ]
         }

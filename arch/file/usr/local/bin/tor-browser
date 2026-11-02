@@ -1,18 +1,10 @@
 #!/bin/sh
-# Tor Browser (creato da lfs.sh): i siti non vedono il tuo indirizzo IP.
-# In modalita' fantasma usa il Tor del sistema (niente "Tor dentro Tor").
-# L'utente fantasma ha una sua copia in memoria (sparisce allo spegnimento).
-TB=/opt/tor-browser
-if [ "$(id -un)" = fantasma ]; then
-  TB="$HOME/.tor-browser"
-  if [ ! -x "$TB/Browser/start-tor-browser" ]; then
-    notify-send -a "Tor Browser" -i fantasma "Tor Browser" "Lo preparo (qualche secondo)..." 2>/dev/null
-    rm -rf "$TB"
-    cp -a /usr/local/lib/fantasma/tor-browser "$TB" || exit 1
-  fi
-fi
+# Tor Browser (creato da vetro-arch.sh): i siti non vedono il tuo indirizzo IP.
+# Lo scarica e lo tiene aggiornato torbrowser-launcher, che controlla la firma di Tor.
+# In modalita' fantasma usa il Tor del sistema (niente "Tor dentro Tor"):
+# TOR_PROVIDER per Tor Browser 13 e successivi, TOR_SKIP_LAUNCH per quelli prima.
 if [ -e /etc/fantasma/attivo ]; then
-  TOR_PROVIDER=none TOR_SOCKS_HOST=127.0.0.1 TOR_SOCKS_PORT=9150
-  export TOR_PROVIDER TOR_SOCKS_HOST TOR_SOCKS_PORT
+  TOR_PROVIDER=none TOR_SKIP_LAUNCH=1 TOR_SOCKS_HOST=127.0.0.1 TOR_SOCKS_PORT=9150
+  export TOR_PROVIDER TOR_SKIP_LAUNCH TOR_SOCKS_HOST TOR_SOCKS_PORT
 fi
-exec "$TB/Browser/start-tor-browser" --detach "$@"
+exec torbrowser-launcher "$@"

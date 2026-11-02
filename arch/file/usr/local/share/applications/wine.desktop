@@ -1,0 +1,12 @@
+# (creato da vetro-arch.sh) prende il posto di quella di Wine: il doppio clic su un
+# programma Windows lo apre sempre nel recinto (/usr/local/bin/wine)
+[Desktop Entry]
+Type=Application
+Name=Programmi Windows (Wine)
+Comment=Apri un programma Windows nel recinto
+Exec=/usr/local/bin/wine start /unix %f
+Icon=wine
+Terminal=false
+NoDisplay=true
+MimeType=application/x-ms-dos-executable;application/x-msi;application/x-ms-shortcut;application/x-msdownload;application/vnd.microsoft.portable-executable;
+StartupNotify=true

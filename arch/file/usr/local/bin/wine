@@ -1,5 +1,5 @@
 #!/usr/bin/python3 -I
-# Programmi Windows nel recinto (creato da lfs.sh).
+# Programmi Windows nel recinto (creato da vetro-arch.sh).
 # Questo comando prende il posto di "wine" (e di winecfg, regedit, msiexec...): i
 # programmi Windows girano in una zona chiusa (bubblewrap) dove vedono SOLO:
 #   - il loro disco C: (~/.wine), dove si installano
@@ -18,6 +18,7 @@ VERO_WINESERVER = os.environ.get("RECINTO_WINESERVER", "/usr/bin/wineserver")
 BWRAP = os.environ.get("RECINTO_BWRAP", "/usr/bin/bwrap")
 PYTHON = "/usr/bin/python3"
 XDG_OPEN_DENTRO = "/usr/local/lib/wine-recinto/xdg-open"
+XDG_OPEN_ARCH = "/usr/bin/xdg-open"
 QUESTO = os.path.realpath(sys.argv[0])           # /usr/local/bin/wine (anche se chiamato come winecfg)
 
 UID = os.getuid()
@@ -369,7 +370,7 @@ def comando_recinto():
          "--dev", "/dev", "--dev-bind-try", "/dev/dri", "/dev/dri",
          "--proc", "/proc",                             # solo i processi del recinto
          "--tmpfs", "/home", "--tmpfs", "/tmp", "--tmpfs", "/var/tmp", "--tmpfs", "/run"]
-    # /opt: Firefox e Tor Browser (che tiene li' la cronologia); /mnt, /media: chiavette e dischi
+    # /opt, /mnt, /media, /srv: altri programmi, chiavette e dischi
     for p in ("/opt", "/mnt", "/media", "/srv"):
         if os.path.isdir(p):
             a += ["--tmpfs", p]                         # chiavette e altri dischi: nascosti
@@ -387,9 +388,11 @@ def comando_recinto():
           "--unsetenv", "WAYLAND_DISPLAY", "--unsetenv", "DBUS_SESSION_BUS_ADDRESS",
           "--chdir", PREFISSO,
           PYTHON, "-I", QUESTO, "--recinto-servizio"]
-    if os.path.exists("/usr/local/bin/xdg-open") and os.path.exists(XDG_OPEN_DENTRO):
-        i = a.index("--setenv")             # gli indirizzi web escono dal recinto solo da qui
-        a[i:i] = ["--ro-bind", XDG_OPEN_DENTRO, "/usr/local/bin/xdg-open"]
+    # gli indirizzi web escono dal recinto solo da qui: il nostro xdg-open prende il
+    # posto di quello di Arch (/usr/bin/xdg-open, che dentro non saprebbe aprire niente)
+    if os.path.exists(XDG_OPEN_ARCH) and os.path.exists(XDG_OPEN_DENTRO):
+        i = a.index("--setenv")
+        a[i:i] = ["--ro-bind", XDG_OPEN_DENTRO, XDG_OPEN_ARCH]
     return a
 
 def custode():

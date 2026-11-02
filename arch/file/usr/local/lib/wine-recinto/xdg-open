@@ -1,5 +1,5 @@
 #!/bin/sh
-# Dentro il recinto dei programmi Windows (creato da lfs.sh): un indirizzo web
+# Dentro il recinto dei programmi Windows (creato da vetro-arch.sh): un indirizzo web
 # (solo http/https) viene passato fuori e si apre nel browser. Nient'altro esce.
 cartella="${XDG_RUNTIME_DIR:-/tmp}/wine-recinto/link"
 case "$1" in

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Tor Browser
+GenericName=Browser anonimo
+Comment=Navigare in Internet senza far vedere il tuo indirizzo IP
+Exec=/usr/local/bin/tor-browser %u
+Icon=torbrowser
+Terminal=false
+Categories=Network;WebBrowser;Security;
+MimeType=text/html;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;application/pdf;
+StartupNotify=true
+StartupWMClass=Tor Browser
