@@ -74,8 +74,11 @@ script cambia un passo, quel passo si rifà da solo, come in `lfs.sh` Fase 10):
      scuro, il nostro tema di puntatori "Vetro" (freccia bianca stile Windows);
    - i pannelli Vetro (barra, dock, cruscotto, centro di controllo, pagina delle
      app, notifiche, blocco schermo, Impostazioni), presi da `lfs.sh` e adattati;
-   - barre del titolo delle finestre (plugin hyprbars, installato con `hyprpm`,
-     lo strumento ufficiale di Hyprland per i plugin).
+   - barre del titolo delle finestre (plugin hyprbars): lo script sceglie la versione
+     del plugin adatta a Hyprland installato con lo stesso metodo di `hyprpm` (il
+     file `hyprpm.toml` degli autori), lo compila per tutto il sistema e lo ricompila
+     dopo ogni aggiornamento di Hyprland (hook di pacman). `hyprpm` stesso no: lavora
+     per singolo utente e chiede `sudo`.
 3. **Programmi**: Tor Browser (installato e aggiornato dal suo programma ufficiale
    `torbrowser-launcher`, che controlla le firme), Thunderbird, LibreOffice in
    italiano, Thunar, Mousepad, terminale foot, Wine per i `.exe`.
@@ -112,6 +115,8 @@ script cambia un passo, quel passo si rifà da solo, come in `lfs.sh` Fase 10):
   microfono spenti, registri solo in memoria. Pulsante "Spegni" subito, che
   mostra l'errore se non riesce.
 - **Utente fantasma**: cartella personale in memoria, sparisce allo spegnimento.
+  Prima del suo desktop si accende sempre la modalità fantasma; se non si accende,
+  il desktop non parte.
 - **VPN WireGuard**, **DNS cifrato** (systemd-resolved), **cassaforte** cifrata
   (fscrypt su ext4).
 - **`.exe` con Wine nel "recinto"** (bubblewrap): i programmi Windows non vedono i
@@ -174,9 +179,9 @@ disponibile in Quickshell.
 - **Pacchetti**: verificare nel piano che Quickshell, `torbrowser-launcher`, yad e
   gli altri siano nei repository ufficiali di Arch. Se uno non c'è, lo script lo
   compila dai sorgenti con il controllo del file.
-- **Plugin hyprbars**: `hyprpm` scarica e compila il plugin per la versione di
-  Hyprland installata; dopo ogni aggiornamento di Hyprland va ricompilato
-  (lo script lo fa con un servizio dopo gli aggiornamenti).
+- **Plugin hyprbars**: se per la versione di Hyprland installata il file
+  `hyprpm.toml` non ha ancora una riga (Hyprland aggiornato da poco), le barre del
+  titolo mancano finché gli autori non la aggiungono; il resto funziona.
 - **Mouse sui pannelli**: nella distro `lfs.sh` i pannelli non ricevevano il mouse
   (causa non trovata). Su Arch con i pacchetti ufficiali va verificato per primo
   (criterio 2).
