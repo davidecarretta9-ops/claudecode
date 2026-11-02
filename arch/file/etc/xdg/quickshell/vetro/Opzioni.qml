@@ -53,13 +53,13 @@ Singleton {
 
         JsonAdapter {
             id: dati
-            property string tema: "adwaita"
-            property real opacita: 0.58
+            property string tema: "vetro"
+            property real opacita: 0.92
             property bool animazioni: true
             property bool sfocatura: true
             property bool affianca: false
             property int spazi: 12
-            property int angoli: 14
+            property int angoli: 18
             property bool dock: true
             property bool secondi: false
             property bool meteo: true

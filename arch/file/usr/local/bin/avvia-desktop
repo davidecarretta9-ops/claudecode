@@ -17,6 +17,16 @@ CONF="${XDG_CONFIG_HOME:-$HOME/.config}"
 mkdir -p "$CONF/hypr" "$CONF/vetro" "$HOME/.cache"
 [ -f "$CONF/hypr/personale.conf" ] || printf '# Le tue modifiche a Hyprland (le legge per ultime)\n' > "$CONF/hypr/personale.conf"
 [ -f "$CONF/hypr/vetro-impostazioni.conf" ] || cp /etc/xdg/hypr/vetro-impostazioni.conf "$CONF/hypr/vetro-impostazioni.conf"
+# app GTK chiare con l'accento blu: il CSS di Vetro si copia se manca o se e' ancora
+# quello di Vetro (stessa prima riga); un gtk.css tuo non si tocca
+CSS="${VETRO_CSS:-/etc/xdg/vetro}"
+for v in 3.0 4.0; do
+    dest="$CONF/gtk-$v/gtk.css"
+    if [ ! -f "$dest" ] || head -n 1 "$dest" | grep -q '^/\* Vetro (creato da vetro-arch.sh)'; then
+        mkdir -p "$CONF/gtk-$v"
+        cp -f "$CSS/gtk-$v.css" "$dest" 2>/dev/null
+    fi
+done
 # risoluzione di partenza: nelle macchine virtuali 1920x1080 (all'accensione QEMU
 # propone spesso 800x600). Quella scelta in Impostazioni -> Schermo vale su tutte
 # (e' scritta dopo, in vetro-impostazioni.conf)

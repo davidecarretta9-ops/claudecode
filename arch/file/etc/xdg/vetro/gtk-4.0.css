@@ -1,0 +1,24 @@
+/* Vetro (creato da vetro-arch.sh): app GTK 4 chiare con l'accento blu.
+   Si riscrive a ogni accesso finche' la prima riga resta questa: per tenere le tue
+   modifiche cambia la prima riga. */
+@define-color accent_bg_color #1a8cff;
+@define-color accent_color #1a8cff;
+@define-color accent_fg_color #ffffff;
+@define-color window_bg_color #f5f7fa;
+@define-color window_fg_color #15181d;
+@define-color sidebar_bg_color #ffffff;
+:root {
+    --accent-bg-color: #1a8cff;
+    --accent-color: #1a8cff;
+    --accent-fg-color: #ffffff;
+    --window-bg-color: #f5f7fa;
+    --window-fg-color: #15181d;
+    --sidebar-bg-color: #ffffff;
+}
+.navigation-sidebar > row {
+    border-radius: 10px;
+}
+.navigation-sidebar > row:selected {
+    background-color: #1a8cff;
+    color: #ffffff;
+}

@@ -1,5 +1,5 @@
 pragma Singleton
-// Colori, caratteri e misure del desktop "Vetro" (creato da lfs.sh, Fase 10).
+// Colori, caratteri e misure del desktop "Vetro" (creato da vetro-arch.sh).
 // Il tema si sceglie da Impostazioni -> Aspetto.
 import QtQuick
 import Quickshell
@@ -12,6 +12,7 @@ Singleton {
     readonly property real opacita: Math.max(0.25, Math.min(0.95, Opzioni.opacita))
 
     readonly property var temi: [
+        { id: "vetro",      nome: "Vetro",      fondo: "#1f242c", accento: "#1a8cff" },
         { id: "adwaita",    nome: "Adwaita",    fondo: "#242424", accento: "#3584e4" },
         { id: "ombra",      nome: "Ombra",      fondo: "#17171a", accento: "#ececf0" },
         { id: "grafite",    nome: "Grafite",    fondo: "#1d2024", accento: "#a9b4c2" },
@@ -44,12 +45,37 @@ Singleton {
     readonly property color giallo: "#febc2e"
     readonly property color verde: "#30d158"
 
+    // le pillole della barra (bianco leggero) e "Non disturbare" acceso (rosso)
+    readonly property color pillola: Qt.rgba(1, 1, 1, 0.06)
+    readonly property color pillolaBordo: Qt.rgba(1, 1, 1, 0.14)
+    readonly property color pillolaSopra: Qt.rgba(1, 1, 1, 0.12)
+    readonly property color rossoFondo: Qt.rgba(0.753, 0.149, 0.176, 0.35)    // #c0262d
+    readonly property color rossoBordo: Qt.rgba(1, 0.353, 0.373, 0.5)         // #ff5a5f
+
+    // le finestre chiare (Impostazioni e le app, come nel video)
+    readonly property color appFondo: "#f5f7fa"
+    readonly property color appCarta: "#ffffff"
+    readonly property color appTesto: "#15181d"
+    readonly property color appTesto2: "#6b7280"
+    readonly property color appTesto3: "#9aa1ab"
+    readonly property color appBordo: Qt.rgba(0, 0, 0, 0.08)
+    readonly property color appSopra: Qt.rgba(0, 0, 0, 0.05)
+
     readonly property int raggio: 24
     readonly property int raggioMedio: 18
     readonly property int raggioPiccolo: 12
     readonly property int spazio: 12
+    readonly property int raggioFinestra: 18
+    readonly property int raggioBarra: 14
+    readonly property int raggioRiquadro: 16
 
-    readonly property string carattere: "Adwaita Sans"
+    // la barra unica in basso: alta 48, staccata 8 dai bordi dello schermo
+    readonly property int altezzaBarra: 48
+    readonly property int staccoBarra: 8
+    // quanto devono stare in alto i pannelli che si aprono sopra la barra
+    readonly property int sopraBarra: altezzaBarra + 2 * staccoBarra + 6
+
+    readonly property string carattere: "DM Sans"
     readonly property string mono: "Adwaita Mono"
     readonly property string fontIcone: "Material Symbols Rounded"
     readonly property bool iconeOk: Qt.fontFamilies().indexOf(fontIcone) >= 0

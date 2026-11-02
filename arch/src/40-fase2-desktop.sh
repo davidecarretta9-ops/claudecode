@@ -6,7 +6,8 @@ FILE_DESKTOP="etc/xdg/quickshell/vetro etc/xdg/hypr usr/local/lib/vetro etc/gtk-
               usr/local/bin/avvia-desktop usr/local/bin/avvio-vetro usr/local/bin/avvia-pannelli
               usr/local/bin/blocca-schermo usr/local/bin/sfondo-desktop
               usr/local/bin/vetro-barre-aggiorna etc/pam.d/vetro-blocco
-              etc/pacman.d/hooks/vetro-barre.hook usr/share/icons/default/index.theme"
+              etc/pacman.d/hooks/vetro-barre.hook usr/share/icons/default/index.theme
+              usr/share/fonts/dm-sans usr/share/icons/hicolor/scalable/apps/vetro.svg etc/xdg/vetro"
 FASE2=("desktop|f2_desktop|$(echo $FILE_DESKTOP)")
 
 # il carattere delle icone dei pannelli (Material Symbols): non c'e' nei pacchetti
@@ -43,6 +44,8 @@ f2_desktop() {
     for p in $FILE_DESKTOP; do
         if [ -d "$VETRO_FILE/$p" ]; then installa_cartella "$p"; else installa_file "$p"; fi
     done
+    # i caratteri nuovi (DM Sans) si vedono subito
+    esegui fc-cache -f
     # puntatori (freccia bianca stile Windows) e sfondi, disegnati con Python
     esegui python3 -I "$(percorso /usr/local/lib/vetro/disegna-cursori)" "$(percorso /usr/share/icons/Vetro)"
     mkdir -p "$(percorso /usr/share/backgrounds)"

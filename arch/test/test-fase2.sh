@@ -44,13 +44,13 @@ test_blocco_pam() {
 
 test_aspetto_gnome() {
     contiene "$F/etc/xdg/quickshell/vetro/Tema.qml" '{ id: "adwaita"'
-    contiene "$F/etc/xdg/quickshell/vetro/Opzioni.qml" 'property string tema: "adwaita"'
+    contiene "$F/etc/xdg/quickshell/vetro/Opzioni.qml" 'property string tema: "vetro"'
     local g
     for g in gtk-3.0 gtk-4.0; do
         contiene "$F/etc/$g/settings.ini" "gtk-theme-name=Adwaita"
-        contiene "$F/etc/$g/settings.ini" "gtk-application-prefer-dark-theme=1"
+        contiene "$F/etc/$g/settings.ini" "gtk-application-prefer-dark-theme=0"
         contiene "$F/etc/$g/settings.ini" "gtk-cursor-theme-name=Vetro"
-        contiene "$F/etc/$g/settings.ini" "gtk-font-name=Adwaita Sans 11"
+        contiene "$F/etc/$g/settings.ini" "gtk-font-name=DM Sans 11"
     done
 }
 

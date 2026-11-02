@@ -1,0 +1,48 @@
+/* Vetro (creato da vetro-arch.sh): app GTK 3 chiare e arrotondate, accento blu.
+   Si riscrive a ogni accesso finche' la prima riga resta questa: per tenere le tue
+   modifiche cambia la prima riga. */
+@define-color theme_selected_bg_color #1a8cff;
+@define-color theme_selected_fg_color #ffffff;
+
+window, .background, dialog {
+    background-color: #f5f7fa;
+    color: #15181d;
+}
+headerbar, .titlebar, toolbar, menubar {
+    background: #f5f7fa;
+    box-shadow: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+/* i lati (Thunar, finestre "Apri file"): voci arrotondate, scelta = pillola blu */
+.sidebar, placessidebar, placessidebar list, .sidebar list {
+    background-color: #ffffff;
+}
+.sidebar row, placessidebar row {
+    border-radius: 10px;
+    margin: 2px 8px;
+    padding: 2px 6px;
+}
+.sidebar row:hover:not(:selected), placessidebar row:hover:not(:selected) {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+.sidebar row:selected, placessidebar row:selected,
+.sidebar row:selected label, placessidebar row:selected label,
+treeview.view:selected, .view:selected, iconview:selected, list row:selected,
+*:selected {
+    background-color: #1a8cff;
+    color: #ffffff;
+}
+entry, button, combobox button, spinbutton {
+    border-radius: 10px;
+}
+button.suggested-action, checkbutton check:checked, radiobutton radio:checked, switch:checked {
+    background-image: none;
+    background-color: #1a8cff;
+    border-color: #1a8cff;
+    color: #ffffff;
+}
+scale highlight, progressbar progress, levelbar block.filled {
+    background-image: none;
+    background-color: #1a8cff;
+    border-color: #1a8cff;
+}
