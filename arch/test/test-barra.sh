@@ -85,6 +85,22 @@ test_anteprime_barra() {
     anteprime barra barra-vuota barra-lunga musica
 }
 
+test_menu() {
+    contiene "$V/Avvio.qml" "MenuVista"
+    contiene "$V/Avvio.qml" "anchors { bottom: true; left: true }"
+    contiene "$V/Avvio.qml" "bottom: Tema.sopraBarra"
+    contiene "$V/MenuVista.qml" '"Cerca"'
+    contiene "$V/MenuVista.qml" '"Tutte le app"'
+    contiene "$V/MenuVista.qml" "function metti_a_fuoco()"
+    sintassi MenuVista.qml Avvio.qml IconaApp.qml
+}
+
+test_anteprime_menu() {
+    anteprime menu menu-cerca menu-tutte
+}
+
+prova test_menu
+prova test_anteprime_menu
 prova test_barra_su_ogni_schermo
 prova test_niente_dock
 prova test_barra_in_basso

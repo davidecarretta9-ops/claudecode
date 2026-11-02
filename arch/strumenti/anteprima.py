@@ -24,7 +24,7 @@ FINTI = QUI / "anteprima"
 SFONDI = ARCH / "file/usr/share/backgrounds"
 CARATTERE = ARCH / "file/usr/share/fonts/dm-sans/DMSans.ttf"
 # i file "puri" (solo QtQuick + Tema/Icona) oltre a tutti i *Vista.qml
-PURI = ["Tema.qml", "Icona.qml", "PasswordPillola.qml", "VoceLato.qml"]
+PURI = ["Tema.qml", "Icona.qml", "IconaApp.qml", "PasswordPillola.qml", "VoceLato.qml"]
 SINGLETON = {"Tema", "Opzioni"}
 
 

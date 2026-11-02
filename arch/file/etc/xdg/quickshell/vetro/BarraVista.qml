@@ -90,35 +90,11 @@ Item {
                     acceso: modelData.attiva === true
                     onCliccata: vista.appCliccata(index)
 
-                    Image {
-                        id: immagine
+                    IconaApp {
                         anchors.centerIn: parent
-                        width: 30
-                        height: 30
-                        source: casella.modelData.icona || ""
-                        sourceSize.width: 60
-                        sourceSize.height: 60
-                        fillMode: Image.PreserveAspectFit
-                        asynchronous: true
-                        smooth: true
-                        mipmap: true
-                    }
-                    // senza icona: un quadratino colorato con l'iniziale
-                    Rectangle {
-                        visible: immagine.status !== Image.Ready
-                        anchors.centerIn: parent
-                        width: 28
-                        height: 28
-                        radius: 8
-                        color: Qt.hsla(((casella.modelData.nome || "?").charCodeAt(0) * 37 % 360) / 360, 0.65, 0.55, 1)
-                        Text {
-                            anchors.centerIn: parent
-                            text: (casella.modelData.nome || "?").charAt(0).toUpperCase()
-                            font.family: Tema.carattere
-                            font.pixelSize: 15
-                            font.weight: Font.Bold
-                            color: "#ffffff"
-                        }
+                        sorgente: casella.modelData.icona || ""
+                        nome: casella.modelData.nome || ""
+                        lato: 30
                     }
                     // l'app e' aperta: un trattino sotto (piu' lungo e blu se e' davanti)
                     Rectangle {
