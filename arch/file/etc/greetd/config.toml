@@ -1,0 +1,8 @@
+# vetro-arch.sh: la schermata di accesso. greetd apre un Hyprland tutto suo (utente
+# "greeter") con la schermata dei pannelli; dopo la password giusta parte il desktop.
+[terminal]
+vt = 1
+
+[default_session]
+command = "Hyprland -c /etc/vetro/accesso-hyprland.conf"
+user = "greeter"

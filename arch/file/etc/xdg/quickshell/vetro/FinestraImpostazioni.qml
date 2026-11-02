@@ -653,104 +653,73 @@ FloatingWindow {
         ColumnLayout {
             id: paginaSchermo
             spacing: 16
-            property var modi: []
-            property string risoluzione: ""
-            property real scala: 1
 
-            Process {
-                running: true
-                command: ["hyprctl", "monitors", "-j"]
-                stdout: StdioCollector {
-                    onStreamFinished: {
-                        try {
-                            const m = JSON.parse(this.text)[0];
-                            const visti = {};
-                            const l = [];
-                            for (let i = 0; i < m.availableModes.length; i++) {
-                                const r = m.availableModes[i].split("@")[0];
-                                if (!visti[r]) { visti[r] = true; l.push(r); }
-                            }
-                            paginaSchermo.modi = l;
-                            paginaSchermo.risoluzione = m.width + "x" + m.height;
-                            paginaSchermo.scala = m.scale;
-                        } catch (e) {}
+            // uno per ogni schermo collegato (barra, dock e sfondo ci sono su tutti)
+            Repeater {
+                model: Opzioni.schermi
+                delegate: Gruppo {
+                    id: gruppoSchermo
+                    required property var modelData
+                    readonly property string nome: modelData.name
+                    readonly property var scelta: Opzioni.scelteSchermi[nome] || ({})
+                    readonly property bool principale: scelta.principale === true
+                        || (!Object.values(Opzioni.scelteSchermi).some(c => c.principale) && Opzioni.schermi[0].name === nome)
+                    readonly property string risoluzione: modelData.width + "x" + modelData.height
+                    readonly property var modi: {
+                        const visti = {}, l = [];
+                        for (const m of (modelData.availableModes || [])) {
+                            const r = m.split("@")[0];
+                            if (!visti[r]) { visti[r] = true; l.push(r); }
+                        }
+                        return l;
                     }
-                }
-            }
-
-            function applica(r, s) {
-                Quickshell.execDetached(["sh", "-c",
-                    "printf 'RISOLUZIONE=%s\\nSCALA=%s\\n' \"$1\" \"$2\" > \"$HOME/.config/schermo.conf\" && " +
-                    "hyprctl keyword monitor \",$1,auto,$2\" >/dev/null", "vetro", r, String(s)]);
-                risoluzione = r;
-                scala = s;
-            }
-
-            Gruppo {
-                Riga {
-                    titolo: "Risoluzione"
-                    sottotitolo: "Ora: " + paginaSchermo.risoluzione
-                }
-                Flow {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 16
-                    Layout.rightMargin: 16
-                    Layout.bottomMargin: 14
-                    spacing: 6
-                    Repeater {
-                        model: paginaSchermo.modi
-                        delegate: Rectangle {
-                            required property var modelData
-                            width: tr.implicitWidth + 22
-                            height: 32
-                            radius: 16
-                            color: modelData === paginaSchermo.risoluzione ? Tema.accento : (ar.containsMouse ? Tema.cartaSopra : Tema.cartaForte)
-                            Text {
-                                id: tr
-                                anchors.centerIn: parent
-                                text: modelData
-                                font.family: Tema.carattere; font.pixelSize: 12
-                                color: modelData === paginaSchermo.risoluzione ? Tema.suAccento : Tema.testo
-                            }
-                            MouseArea {
-                                id: ar
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: paginaSchermo.applica(modelData, paginaSchermo.scala)
+                    Riga {
+                        titolo: gruppoSchermo.nome + (gruppoSchermo.principale ? "  (principale)" : "")
+                        sottotitolo: "Ora: " + gruppoSchermo.risoluzione + ", grandezza " + Math.round(modelData.scale * 100) + "%"
+                        Pulsante {
+                            visible: Opzioni.schermi.length > 1 && !gruppoSchermo.principale
+                            testo: "Rendi principale"
+                            icona: "star"
+                            onCliccato: Opzioni.sceltaSchermo(gruppoSchermo.nome, "principale", true)
+                        }
+                    }
+                    Riga {
+                        visible: Opzioni.schermi.length > 1 && !gruppoSchermo.principale
+                        titolo: "Posizione"
+                        sottotitolo: "Rispetto allo schermo principale"
+                        Repeater {
+                            model: [["destra", "A destra"], ["sinistra", "A sinistra"], ["sopra", "Sopra"], ["duplica", "Uguale"]]
+                            delegate: Scelta {
+                                required property var modelData
+                                testo: modelData[1]
+                                scelto: (gruppoSchermo.scelta.posizione || "destra") === modelData[0]
+                                onCliccato: Opzioni.sceltaSchermo(gruppoSchermo.nome, "posizione", modelData[0])
                             }
                         }
                     }
-                }
-            }
-            Gruppo {
-                Riga {
-                    titolo: "Grandezza di testi e finestre"
-                    sottotitolo: Math.round(paginaSchermo.scala * 100) + "%"
-                    Row {
-                        spacing: 4
+                    Riga {
+                        titolo: "Grandezza di testi e finestre"
                         Repeater {
                             model: [1, 1.25, 1.5, 2]
-                            delegate: Rectangle {
+                            delegate: Scelta {
                                 required property var modelData
-                                width: ts.implicitWidth + 22
-                                height: 32
-                                radius: 16
-                                color: Math.abs(modelData - paginaSchermo.scala) < 0.01 ? Tema.accento : (areaScala.containsMouse ? Tema.cartaSopra : Tema.cartaForte)
-                                Text {
-                                    id: ts
-                                    anchors.centerIn: parent
-                                    text: Math.round(modelData * 100) + "%"
-                                    font.family: Tema.carattere; font.pixelSize: 12
-                                    color: Math.abs(modelData - paginaSchermo.scala) < 0.01 ? Tema.suAccento : Tema.testo
-                                }
-                                MouseArea {
-                                    id: areaScala
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: paginaSchermo.applica(paginaSchermo.risoluzione, modelData)
-                                }
+                                testo: Math.round(modelData * 100) + "%"
+                                scelto: Math.abs(modelData - gruppoSchermo.modelData.scale) < 0.01
+                                onCliccato: Opzioni.sceltaSchermo(gruppoSchermo.nome, "scala", modelData)
+                            }
+                        }
+                    }
+                    Flow {
+                        Layout.fillWidth: true
+                        Layout.margins: 14
+                        spacing: 6
+                        Repeater {
+                            model: gruppoSchermo.modi
+                            delegate: Scelta {
+                                required property var modelData
+                                testo: modelData
+                                scelto: modelData === gruppoSchermo.risoluzione
+                                onCliccato: Opzioni.sceltaSchermo(gruppoSchermo.nome, "risoluzione", modelData)
                             }
                         }
                     }
@@ -914,6 +883,26 @@ FloatingWindow {
             Text { text: puls.testo; font.family: Tema.carattere; font.pixelSize: 12; font.weight: Font.Medium; color: Tema.testo; anchors.verticalCenter: parent.verticalCenter }
         }
         MouseArea { id: areaPu; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: puls.cliccato() }
+    }
+
+    // una scelta tonda (risoluzione, posizione, grandezza): colorata quando e' quella attuale
+    component Scelta: Rectangle {
+        id: scelta
+        property string testo: ""
+        property bool scelto: false
+        signal cliccato()
+        implicitWidth: testoScelta.implicitWidth + 22
+        implicitHeight: 32
+        radius: 16
+        color: scelto ? Tema.accento : (areaScelta.containsMouse ? Tema.cartaSopra : Tema.cartaForte)
+        Text {
+            id: testoScelta
+            anchors.centerIn: parent
+            text: scelta.testo
+            font.family: Tema.carattere; font.pixelSize: 12
+            color: scelta.scelto ? Tema.suAccento : Tema.testo
+        }
+        MouseArea { id: areaScelta; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: scelta.cliccato() }
     }
 
     component Semaforo: Rectangle {

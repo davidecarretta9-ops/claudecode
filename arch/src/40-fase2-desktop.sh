@@ -9,11 +9,37 @@ FILE_DESKTOP="etc/xdg/quickshell/vetro etc/xdg/hypr usr/local/lib/vetro etc/gtk-
               etc/pacman.d/hooks/vetro-barre.hook usr/share/icons/default/index.theme"
 FASE2=("desktop|f2_desktop|$(echo $FILE_DESKTOP)")
 
+# il carattere delle icone dei pannelli (Material Symbols): non c'e' nei pacchetti
+# ufficiali di Arch, si scarica da Google a una versione fissa e si controlla
+FONT_ICONE_URL="https://github.com/google/material-design-icons/raw/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/variablefont/MaterialSymbolsRounded%5BFILL,GRAD,opsz,wght%5D.ttf"
+FONT_ICONE_SHA256=7e74e36533ccee12c2b81e75bfcf3ccf123d3bb7e7e46d65d94445f23db0c97c
+
+installa_font_icone() {
+    local dst tmp
+    dst=$(percorso /usr/share/fonts/material-symbols/MaterialSymbolsRounded.ttf)
+    if [ -f "$dst" ] && echo "$FONT_ICONE_SHA256  $dst" | sha256sum -c --status; then
+        return 0
+    fi
+    tmp=$(mktemp)
+    if ! esegui curl -fsSL --retry 3 -o "$tmp" "$FONT_ICONE_URL"; then
+        rm -f "$tmp"
+        muori "Non riesco a scaricare il carattere delle icone: controlla la rete e rilancia"
+    fi
+    if ! echo "$FONT_ICONE_SHA256  $tmp" | sha256sum -c --status; then
+        rm -f "$tmp"
+        muori "Il carattere delle icone scaricato non passa il controllo (sha256): rilancia piu' tardi"
+    fi
+    install -D -m 644 "$tmp" "$dst"
+    rm -f "$tmp"
+    esegui fc-cache -f
+}
+
 f2_desktop() {
     local senza=() p s
     for p in "${PKG_FASE2[@]}"; do [ "$p" = quickshell ] || senza+=("$p"); done
     installa_pacchetti "${senza[@]}"
     installa_quickshell
+    installa_font_icone
     for p in $FILE_DESKTOP; do
         if [ -d "$VETRO_FILE/$p" ]; then installa_cartella "$p"; else installa_file "$p"; fi
     done
@@ -31,4 +57,18 @@ f2_desktop() {
     esegui "$(percorso /usr/local/bin/vetro-barre-aggiorna)"
     esegui systemctl --global enable pipewire.socket wireplumber.service pipewire-pulse.socket
     ok "Desktop Vetro con l'aspetto di GNOME"
+}
+
+# --- la schermata di accesso: greetd apre accesso.qml in un Hyprland tutto suo ----------
+FASE2+=("accesso|f2_accesso|etc/greetd/config.toml etc/vetro/accesso-hyprland.conf")
+
+f2_accesso() {
+    installa_pacchetti greetd
+    installa_file etc/greetd/config.toml etc/vetro/accesso-hyprland.conf
+    # l'utente "greeter" (lo crea il pacchetto greetd) deve poter usare la scheda video
+    esegui usermod -aG video greeter
+    esegui systemctl enable greetd.service
+    # greetd usa la prima console: il login di testo li' non serve piu'
+    esegui systemctl disable getty@tty1.service
+    ok "Schermata di accesso (greetd)"
 }

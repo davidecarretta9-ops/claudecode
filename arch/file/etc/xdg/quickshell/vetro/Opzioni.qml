@@ -1,10 +1,12 @@
 pragma Singleton
-// Le scelte fatte da Impostazioni (creato da lfs.sh, Fase 10). Sono salvate in
+// Le scelte fatte da Impostazioni (creato da vetro-arch.sh). Sono salvate in
 // ~/.config/vetro/impostazioni.json; quelle che riguardano le finestre anche in
 // ~/.config/hypr/vetro-impostazioni.conf (lo legge Hyprland).
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
+import "Schermi.js" as Schermi
 
 Singleton {
     id: opzioni
@@ -73,26 +75,51 @@ Singleton {
         }
     }
 
-    // --- lo schermo: risoluzione e grandezza (le sceglie anche Impostazioni -> Schermo,
-    // e il programma "schermo" del desktop classico: stesso file ~/.config/schermo.conf)
-    property string risoluzione: ""
-    property string scala: "1"
+    // --- gli schermi: le scelte di Impostazioni -> Schermo, per ogni schermo
+    // (~/.config/vetro/schermi.json); le regole di Hyprland le fa Schermi.js
+    property var scelteSchermi: ({})
+    property var schermi: []              // da "hyprctl monitors all -j"
     property bool schermoLetto: false
-    function leggiSchermo(t) {
+    function leggiSchermi(t) {
+        try { scelteSchermi = JSON.parse(t) || {}; } catch (e) { scelteSchermi = {}; }
         schermoLetto = true;
-        const r = /^RISOLUZIONE=(\d+x\d+)/m.exec(t);
-        const s = /^SCALA=([0-9.]+)/m.exec(t);
-        risoluzione = r ? r[1] : "";
-        scala = s ? s[1] : "1";
         applicaFinestre();
     }
     FileView {
-        path: opzioni.casa + "/.config/schermo.conf"
+        id: fileSchermi
+        path: opzioni.casa + "/.config/vetro/schermi.json"
         watchChanges: true
         printErrors: false
         onFileChanged: reload()
-        onLoaded: opzioni.leggiSchermo(text())
-        onLoadFailed: opzioni.leggiSchermo("")
+        onLoaded: opzioni.leggiSchermi(text())
+        onLoadFailed: opzioni.leggiSchermi("{}")
+    }
+    Process {
+        id: elencoSchermi
+        running: true
+        command: ["hyprctl", "monitors", "all", "-j"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { opzioni.schermi = JSON.parse(this.text); } catch (e) {}
+                opzioni.applicaFinestre();
+            }
+        }
+    }
+    // uno schermo attaccato o staccato: si rileggono gli schermi e si rifanno le regole
+    Connections {
+        target: Hyprland.monitors
+        function onValuesChanged() { elencoSchermi.running = true; }
+    }
+    // sceltaSchermo("HDMI-A-1", "risoluzione" | "posizione" | "principale" | "scala", valore)
+    function sceltaSchermo(nome, campo, valore) {
+        const s = JSON.parse(JSON.stringify(scelteSchermi));
+        if (campo === "principale" && valore)
+            for (const n in s) s[n].principale = false;
+        if (!s[nome]) s[nome] = {};
+        s[nome][campo] = valore;
+        scelteSchermi = s;
+        fileSchermi.setText(JSON.stringify(s, null, 2));
+        applicaFinestre();
     }
 
     // il file di adesso, per non far ricaricare Hyprland se non cambia niente
@@ -107,8 +134,7 @@ Singleton {
     function testoHyprland() {
         let t = "# Creato da Impostazioni (desktop Vetro): non modificarlo a mano,\n";
         t += "# le tue aggiunte vanno in ~/.config/hypr/personale.conf\n";
-        if (risoluzione !== "")
-            t += "monitor = , " + risoluzione + ", auto, " + scala + "\n";
+        t += Schermi.regole(schermi, scelteSchermi);
         t += "animations {\n    enabled = " + (animazioni ? "true" : "false") + "\n}\n";
         t += "decoration {\n    rounding = " + angoli + "\n";
         t += "    blur {\n        enabled = " + (sfocatura ? "true" : "false") + "\n    }\n}\n";

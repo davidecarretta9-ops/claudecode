@@ -63,8 +63,39 @@ test_niente_lfs() {
     contiene "$F/etc/xdg/quickshell/vetro/Stato.qml" "property bool bloccato: false"
 }
 
+# curl finto che scrive "carattere" nel file chiesto con -o
+curl_carattere() {
+    finto_con curl <<'FINE'
+while [ $# -gt 0 ]; do [ "$1" = -o ] && { printf carattere > "$2"; shift; }; shift; done
+FINE
+}
+
+test_font_icone() {
+    radice_finta; finto fc-cache; curl_carattere
+    FONT_ICONE_SHA256=$(printf carattere | sha256sum | cut -d' ' -f1)
+    installa_font_icone >/dev/null
+    esiste "$RADICE/usr/share/fonts/material-symbols/MaterialSymbolsRounded.ttf"
+    chiamato "curl "
+    chiamato "fc-cache"
+    case "$FONT_ICONE_URL" in
+        */10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/*) ok_prova "indirizzo con la versione fissa" ;;
+        *) fallita "indirizzo senza la versione fissa: $FONT_ICONE_URL" ;;
+    esac
+}
+
+test_font_icone_sbagliato() {
+    radice_finta; finto fc-cache; curl_carattere
+    FONT_ICONE_SHA256=0000000000000000000000000000000000000000000000000000000000000000
+    local msg; msg=$( (installa_font_icone) 2>&1 ); local rc=$?
+    uguale "1" "$rc" "con il file sbagliato si ferma"
+    case "$msg" in *controllo*) ok_prova "dice che il controllo non passa" ;; *) fallita "dice che il controllo non passa: $msg" ;; esac
+    non_esiste "$RADICE/usr/share/fonts/material-symbols/MaterialSymbolsRounded.ttf"
+}
+
 test_f2_desktop() {
     radice_finta; finto pacman; finto systemctl; finto python3; finto vetro-barre-aggiorna
+    finto fc-cache; curl_carattere
+    FONT_ICONE_SHA256=$(printf carattere | sha256sum | cut -d' ' -f1)
     f2_desktop >/dev/null
     esiste "$RADICE/etc/xdg/quickshell/vetro/shell.qml"
     esiste "$RADICE/etc/xdg/hypr/vetro.conf"
@@ -74,6 +105,7 @@ test_f2_desktop() {
     chiamato "python3 -I $RADICE/usr/local/lib/vetro/disegna-cursori $RADICE/usr/share/icons/Vetro"
     chiamato "vetro-barre-aggiorna"
     chiamato "systemctl --global enable pipewire.socket wireplumber.service pipewire-pulse.socket"
+    esiste "$RADICE/usr/share/fonts/material-symbols/MaterialSymbolsRounded.ttf"
 }
 
 test_qml() {
@@ -90,6 +122,8 @@ prova test_barre_versione
 prova test_blocco_pam
 prova test_aspetto_gnome
 prova test_niente_lfs
+prova test_font_icone
+prova test_font_icone_sbagliato
 prova test_f2_desktop
 prova test_qml
 riassunto
