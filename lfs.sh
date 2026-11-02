@@ -12861,9 +12861,10 @@ notify-send -i preferences-desktop "Desktop" "$msg" 2>/dev/null || echo "$msg"
 EOF
 cat > /usr/local/bin/browser-predefinito << "EOF"
 #!/bin/sh
-# Apre il browser (creato da lfs.sh, Fase 10): Tor Browser se c'e', altrimenti Firefox
+# Apre il browser (creato da lfs.sh, Fase 10): Tor Browser, l'unico browser
 if [ -x /usr/local/bin/tor-browser ]; then exec /usr/local/bin/tor-browser "$@"; fi
-exec firefox "$@"
+notify-send -u critical "Browser" "Tor Browser non c'e'" 2>/dev/null
+exit 1
 EOF
 # 3) sfondo e blocco schermo: nel desktop Vetro li fanno i pannelli
 cat > /usr/local/bin/sfondo-desktop << "EOF"
@@ -18545,6 +18546,45 @@ fi
 echo "[OK] Correzioni ai programmi delle fasi prima (modalita' fantasma accesa di serie)"
 }
 
+f10_solo_tor() {
+# NON IN BLFS: un solo browser, Tor Browser. Firefox si installa nella Fase 2b (quando
+# Tor Browser non c'e' ancora e le fasi dopo lo usano): qui alla fine si toglie.
+# Programma, comando, voce delle app e del menu; pagine web, link e PDF si aprono con
+# Tor Browser. I dati di Firefox del tuo utente (~/.mozilla) restano: se vuoi li
+# cancelli tu. Le "Stampanti" (pagina localhost:631) erano una pagina per Firefox:
+# Tor Browser non apre gli indirizzi del computer stesso, quindi la voce si toglie.
+if [ ! -f /usr/share/applications/tor-browser.desktop ]; then
+  echo "[OK] Tor Browser non c'e': Firefox resta"
+  return 0
+fi
+local casa="" f
+[ -n "${MIA_UTENTE:-}" ] && casa=$(getent passwd "$MIA_UTENTE" | cut -d: -f6)
+rm -rf /opt/firefox
+rm -f /usr/bin/firefox /usr/share/applications/firefox.desktop /usr/share/applications/cups.desktop
+# /usr/local/bin/firefox: l'avviso della modalita' fantasma prima di aprire Firefox
+if [ -L /usr/local/bin/firefox ]; then rm -f /usr/local/bin/firefox; fi
+# pagine web, link e PDF: Tor Browser
+for f in /etc/xdg/mimeapps.list ${casa:+"$casa/.config/mimeapps.list"}; do
+  if [ -f "$f" ]; then
+    sed -i -e 's/=firefox\.desktop;*$/=tor-browser.desktop/' -e 's/firefox\.desktop;//g' "$f"
+  fi
+done
+# menu e barra del desktop classico, tasto del vecchio Sway
+if [ -f /etc/xdg/labwc/menu.xml ]; then
+  sed -i '/<item label="Firefox/,/<\/item>/d' /etc/xdg/labwc/menu.xml
+fi
+f=/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml
+if [ -f "$f" ] && grep -q 'firefox.desktop' "$f"; then
+  sed -i 's|/usr/share/applications/firefox.desktop|/usr/share/applications/tor-browser.desktop|' "$f"
+fi
+if [ -n "$casa" ] && [ -f "$casa/.config/sway/config" ]; then
+  sed -i 's|exec firefox$|exec /usr/local/bin/tor-browser|' "$casa/.config/sway/config"
+fi
+if command -v update-desktop-database >/dev/null; then update-desktop-database /usr/share/applications; fi
+[ ! -e /usr/bin/firefox ] && [ ! -e /opt/firefox ] || { echo "Non riesco a togliere Firefox"; return 1; }
+echo "[OK] Un solo browser: Tor Browser (Firefox tolto)"
+}
+
 f10_barre() {
 # NON IN BLFS: le barre del titolo delle finestre, con il plugin "hyprbars" degli
 # autori di Hyprland. Hyprland da solo non disegna barre, e non sposta una finestra
@@ -18623,6 +18663,7 @@ LISTA_STEP17=(
   "avvio del desktop Vetro|-|f10_sessione"
   "icone nitide in Thunar|-|f10_thunar_icone"
   "correzioni ai programmi delle fasi prima|-|f10_ritocchi"
+  "un solo browser: Tor Browser|-|f10_solo_tor"
   "barre del titolo (hyprbars)|hyprland-plugins-6acc073.tar.gz|f10_barre"
 )
 
@@ -18674,6 +18715,7 @@ cmd_fase10() {
   info "Accendi la distro (sudo $0 avvia): ora parte con l'accelerazione 3D e il desktop Vetro."
   info "   All'accensione: schermata di blocco, scrivi la password e premi Invio."
   info "   Altri utenti (anche fantasma): Ctrl+Alt+F2. Modalita' fantasma accesa di serie."
+  info "   Browser: solo Tor Browser (Firefox si toglie alla fine di questa fase)."
   info "   Tasto Windows: cerca le app      Windows+A: centro di controllo"
   info "   Windows+D (o clic sull'ora): cruscotto con meteo, calendario e prestazioni"
   info "   Windows+I: Impostazioni          Windows+L: blocco schermo"
