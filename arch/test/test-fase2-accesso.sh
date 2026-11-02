@@ -13,6 +13,8 @@ test_greetd() {
     contiene "$F/etc/vetro/accesso-hyprland.conf" 'exec-once = qs -p /etc/xdg/quickshell/vetro/accesso.qml; hyprctl dispatch exit'
     contiene "$F/etc/vetro/accesso-hyprland.conf" 'env = XCURSOR_THEME, Vetro'
     non_contiene "$F/etc/vetro/accesso-hyprland.conf" 'bind'
+    # la password si scrive con la tastiera italiana, come nel desktop
+    contiene "$F/etc/vetro/accesso-hyprland.conf" 'kb_layout = it'
 }
 
 test_f2_accesso() {

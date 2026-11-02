@@ -77,6 +77,13 @@ f4_fantasma() {
         if [ -d "$VETRO_FILE/$p" ]; then installa_cartella "$p"; else installa_file "$p"; fi
     done
     esegui visudo -cf "$(percorso /etc/sudoers.d/30-fantasma)"
+    # le regole del Guardiano: il servizio puo' scrivere solo li' (ReadWritePaths), e
+    # senza la cartella non parte (e i tuoi programmi resterebbero senza internet)
+    mkdir -p "$(percorso /etc/guardiano-rete)"
+    chmod 755 "$(percorso /etc/guardiano-rete)"
+    p=$(percorso /etc/guardiano-rete/regole)
+    [ -f "$p" ] || printf '# Regole del Guardiano della rete: permetti/blocca <TAB> programma\n' > "$p"
+    chmod 644 "$p"
     # il gruppo che risponde alle domande del Guardiano
     u=$(utente_vetro) || exit 1
     esegui groupadd -f guardiano

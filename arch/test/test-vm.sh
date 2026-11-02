@@ -87,6 +87,15 @@ prova test_sintassi
 prova test_avvia_con_9p
 prova test_avvia_senza_9p
 prova test_installa
+test_installa_senza_iso() {
+    prepara; qemu_finto si
+    PATH="$PROVA_DIR/bin:$PATH" bash "$VM" installa --prova > "$PROVA_DIR/uscita" 2>&1
+    uguale 1 "$?" "senza ISO si ferma"
+    contiene "$PROVA_DIR/uscita" "Non trovo la ISO di Arch"
+    rm -rf "$PROVA_DIR"
+}
+
+prova test_installa_senza_iso
 prova test_scelta_iso
 prova test_guida
 riassunto

@@ -80,6 +80,9 @@ FINE
     esiste "$RADICE/usr/local/sbin/firewall-avvia"
     esiste "$RADICE/etc/systemd/system/tor-fantasma.service"
     contiene "$RADICE/etc/systemd/system/guardiano-rete.service" "GUARDIANO_GRUPPO=guardiano"
+    # il servizio ha ReadWritePaths=/etc/guardiano-rete: senza la cartella non parte
+    esiste "$RADICE/etc/guardiano-rete/regole"
+    uguale 644 "$(stat -c %a "$RADICE/etc/guardiano-rete/regole" 2>/dev/null)" "regole leggibili (644)"
     # la seconda volta (rifai) non la riaccende se l'avevi spenta
     : > "$RADICE/.chiamate"
     ( set -Eeuo pipefail; f4_fantasma ) >/dev/null || fallita "f4_fantasma si ferma (seconda volta)"

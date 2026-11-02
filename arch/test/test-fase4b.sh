@@ -18,7 +18,7 @@ test_dns() {
     else fallita "ordine dei file DNS sbagliato"; fi
     # niente DNS del router: si usa solo quello cifrato
     local n
-    for n in 20-cavo 25-wifi; do
+    for n in 10-cavo 10-wifi; do
         contiene "$F/etc/systemd/network/$n.network" "UseDNS=no"
         contiene "$F/etc/systemd/network/$n.network" "SendHostname=no"
     done

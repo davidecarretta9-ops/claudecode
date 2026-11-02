@@ -79,7 +79,7 @@ prepara_qemu() {
     serve_qemu
     [ -f "$DISCO" ] || muori "Non trovo il disco virtuale: prima  bash $0 crea"
     if [ "$modo" = installa ]; then
-        iso=$(ls -1 "$CARTELLA"/archlinux-*-x86_64.iso 2>/dev/null | sort | tail -n 1)
+        iso=$(ls -1 "$CARTELLA"/archlinux-*-x86_64.iso 2>/dev/null | sort | tail -n 1 || true)
         [ -n "$iso" ] || muori "Non trovo la ISO di Arch: prima  bash $0 crea"
     fi
     mkdir -p "$CONDIVISA"

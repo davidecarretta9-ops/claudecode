@@ -7,11 +7,11 @@ V="$F/etc/xdg/quickshell/vetro"
 QMLLINT=${QMLLINT:-$(command -v pyside6-qmllint || echo "$HOME/.vetro-qt/bin/pyside6-qmllint")}
 
 test_file_rete() {
-    contiene "$F/etc/systemd/network/20-cavo.network" "Name=en* eth*"
-    contiene "$F/etc/systemd/network/20-cavo.network" "DHCP=yes"
-    contiene "$F/etc/systemd/network/25-wifi.network" "Name=wl*"
-    contiene "$F/etc/systemd/network/25-wifi.network" "DHCP=yes"
-    contiene "$F/etc/systemd/network/25-wifi.network" "IgnoreCarrierLoss=3s"
+    contiene "$F/etc/systemd/network/10-cavo.network" "Name=en* eth*"
+    contiene "$F/etc/systemd/network/10-cavo.network" "DHCP=yes"
+    contiene "$F/etc/systemd/network/10-wifi.network" "Name=wl*"
+    contiene "$F/etc/systemd/network/10-wifi.network" "DHCP=yes"
+    contiene "$F/etc/systemd/network/10-wifi.network" "IgnoreCarrierLoss=3s"
     contiene "$F/etc/iwd/main.conf" "EnableNetworkConfiguration=false"
     contiene "$F/etc/iwd/main.conf" "AddressRandomization=network"
     if [ -x "$F/usr/local/bin/vetro-wifi" ]; then ok_prova "vetro-wifi si puo' eseguire"
@@ -21,7 +21,7 @@ test_file_rete() {
 test_f2_rete() {
     radice_finta; finto pacman; finto systemctl
     f2_rete >/dev/null
-    esiste "$RADICE/etc/systemd/network/20-cavo.network"
+    esiste "$RADICE/etc/systemd/network/10-cavo.network"
     esiste "$RADICE/etc/iwd/main.conf"
     esiste "$RADICE/usr/local/bin/vetro-wifi"
     chiamato "pacman -S --needed --noconfirm iwd"
@@ -51,6 +51,19 @@ test_pannello_wifi() {
     done
 }
 
+test_ordine_file_rete() {
+    # networkd usa il PRIMO file (in ordine alfabetico) che va bene per la scheda:
+    # i nostri devono venire prima di quelli che archinstall copia dalla ISO
+    local f n
+    for f in "$F"/etc/systemd/network/*.network; do
+        n=$(basename "$f")
+        if [[ "$n" < "20-ethernet.network" && "$n" < "20-wlan.network" ]]; then
+            ok_prova "$n viene prima di quelli di archinstall"
+        else fallita "$n viene dopo 20-ethernet/20-wlan.network di archinstall"; fi
+    done
+}
+
+prova test_ordine_file_rete
 prova test_file_rete
 prova test_f2_rete
 prova test_fase2_ha_rete
