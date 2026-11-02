@@ -1,7 +1,7 @@
 pragma Singleton
 // Le finestre aperte (creato da lfs.sh, Fase 10). Hyprland non sa "ridurre a icona":
 // quando un programma lo chiede (il pulsante giallo), la finestra va in una scrivania
-// nascosta e compare nel dock; cliccandola torna dov'era.
+// nascosta e compare nella barra; cliccandola torna dov'era.
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland

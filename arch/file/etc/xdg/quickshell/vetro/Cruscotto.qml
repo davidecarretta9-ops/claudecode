@@ -11,8 +11,8 @@ PanelWindow {
     id: cruscotto
 
     visible: Stato.cruscotto || corpo.opacity > 0.01
-    anchors { top: true }
-    margins { top: 6 }
+    anchors { bottom: true }
+    margins { bottom: Tema.sopraBarra }
     implicitWidth: 900
     implicitHeight: 520
     exclusiveZone: 0
@@ -47,7 +47,7 @@ PanelWindow {
                 Behavior on yScale { NumberAnimation { duration: Tema.media; easing.type: Easing.OutCubic } }
             },
             Translate {
-                y: Stato.cruscotto ? 0 : -16
+                y: Stato.cruscotto ? 0 : 16
                 Behavior on y { NumberAnimation { duration: Tema.media; easing.type: Easing.OutCubic } }
             }
         ]

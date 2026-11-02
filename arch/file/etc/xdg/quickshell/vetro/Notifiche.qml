@@ -1,4 +1,4 @@
-// Le notifiche nuove, in alto a destra (creato da lfs.sh, Fase 10). Entrano da
+// Le notifiche nuove, in basso a destra sopra la barra (creato da vetro-arch.sh). Entrano da
 // destra e dopo qualche secondo spariscono (restano nel centro di controllo).
 import QtQuick
 import Quickshell
@@ -9,8 +9,8 @@ PanelWindow {
     id: finestra
 
     visible: Avvisi.visibili.length > 0 && !Stato.pannello && !Stato.bloccato
-    anchors { top: true; right: true }
-    margins { top: 6; right: 10 }
+    anchors { bottom: true; right: true }
+    margins { bottom: Tema.sopraBarra; right: Tema.staccoBarra }
     implicitWidth: 380
     implicitHeight: Math.max(1, lista.contentHeight)
     exclusiveZone: 0

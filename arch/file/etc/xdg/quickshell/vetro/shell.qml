@@ -1,6 +1,6 @@
 //@ pragma AppId org.quickshell.vetro
 //@ pragma IconTheme AdwaitaLegacy
-// Desktop "Vetro" (creato da lfs.sh, Fase 10): il punto di partenza di Quickshell.
+// Desktop "Vetro" (creato da vetro-arch.sh): il punto di partenza di Quickshell.
 // Ogni pezzo e' in un file a parte, qui accanto. Comandi da terminale:
 //   qs -p /etc/xdg/quickshell/vetro ipc call pannelli apri pannello|cruscotto|avvio|impostazioni
 //   qs -p /etc/xdg/quickshell/vetro ipc call blocco blocca
@@ -13,7 +13,7 @@ import Quickshell.Hyprland
 ShellRoot {
     id: radice
 
-    // su ogni schermo: sfondo, barra in alto, dock in basso
+    // su ogni schermo: sfondo e barra unica in basso
     Variants {
         model: Quickshell.screens
         delegate: Component { Sfondo {} }
@@ -22,12 +22,9 @@ ShellRoot {
         model: Quickshell.screens
         delegate: Component { Barra {} }
     }
-    Variants {
-        model: Opzioni.dock ? Quickshell.screens : []
-        delegate: Component { Dock {} }
-    }
 
     Pannello {}
+    MusicaRiquadro {}
     Cruscotto {}
     Avvio {}
     Notifiche {}

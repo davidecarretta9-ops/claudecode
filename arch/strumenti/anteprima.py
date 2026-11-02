@@ -7,7 +7,7 @@ dipendono da Quickshell) usando PySide6, senza schermo:
 
 Ogni file scene/NOME.qml (la radice ha width e height) diventa CARTELLA_USCITA/NOME.png.
 Le scene vedono gli sfondi veri con la proprieta' "sfondi" (cartella, come indirizzo
-file://). Ombre e sfocature (MultiEffect) qui non si vedono.
+file://) e i file dello script con "radice" (arch/file). Ombre e sfocature (MultiEffect) qui non si vedono.
 Esce con 1 se una scena ha errori QML (stampati con il nome del file).
 """
 import argparse
@@ -93,6 +93,7 @@ def main() -> int:
             vista = QQuickView()
             vista.engine().addImportPath(str(cartella))
             vista.rootContext().setContextProperty("sfondi", QUrl.fromLocalFile(str(SFONDI)).toString())
+            vista.rootContext().setContextProperty("radice", QUrl.fromLocalFile(str(ARCH / "file")).toString())
             vista.setResizeMode(QQuickView.ResizeMode.SizeViewToRootObject)
             vista.setSource(QUrl.fromLocalFile(str(cartella / ("scena-" + s.name))))
             for e in vista.errors():

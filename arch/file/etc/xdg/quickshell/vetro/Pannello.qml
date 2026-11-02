@@ -1,6 +1,6 @@
-// Il centro di controllo, a destra (creato da lfs.sh, Fase 10): saluto e ora,
+// Il centro di controllo, a destra sopra la barra (creato da vetro-arch.sh): saluto e ora,
 // "resta sveglio", ricerca delle app, musica, schermate, comandi rapidi, volume,
-// notifiche e spegnimento. Si apre con l'icona in alto a destra o Windows+A.
+// notifiche e spegnimento. Si apre dalla pillola di sistema nella barra o Windows+A.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -13,7 +13,7 @@ PanelWindow {
 
     visible: Stato.pannello || sfondo.opacity > 0.01
     anchors { top: true; bottom: true; right: true }
-    margins { top: 6; bottom: 10; right: 10 }
+    margins { top: 10; bottom: Tema.sopraBarra; right: Tema.staccoBarra }
     implicitWidth: 412
     exclusiveZone: 0
     color: "transparent"

@@ -11,7 +11,7 @@ PanelWindow {
 
     visible: mostra || corpo.opacity > 0.01
     anchors { bottom: true }
-    margins { bottom: 110 }
+    margins { bottom: Tema.sopraBarra + 40 }
     implicitWidth: 300
     implicitHeight: 56
     exclusiveZone: 0

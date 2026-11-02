@@ -10,17 +10,19 @@ Singleton {
     property bool cruscotto: false       // meteo, calendario, prestazioni
     property int schedaCruscotto: 0
     property bool avvio: false           // cerca le app
+    property bool musica: false          // riquadro della musica (dalla barra)
     property bool impostazioni: false    // finestra delle Impostazioni
     property string pagina: "generale"
     property bool bloccato: false        // blocco schermo
     property bool restaSveglio: false    // lo schermo non si spegne e non si blocca
-    // le barre in alto (una per schermo): restano cliccabili quando un pannello e' aperto
+    // le barre (una per schermo): restano cliccabili quando un pannello e' aperto
     property var barre: []
 
     function chiudiTutto() {
         pannello = false;
         cruscotto = false;
         avvio = false;
+        musica = false;
     }
 
     function alterna(nome) {
@@ -28,11 +30,13 @@ Singleton {
         if (nome === "pannello") era = pannello;
         else if (nome === "cruscotto") era = cruscotto;
         else if (nome === "avvio") era = avvio;
+        else if (nome === "musica") era = musica;
         chiudiTutto();
         if (era) return;
         if (nome === "pannello") pannello = true;
         else if (nome === "cruscotto") cruscotto = true;
         else if (nome === "avvio") avvio = true;
+        else if (nome === "musica") musica = true;
     }
 
     function apriCruscotto(scheda) {

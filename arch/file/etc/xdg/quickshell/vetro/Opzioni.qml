@@ -22,7 +22,6 @@ Singleton {
     property alias affianca: dati.affianca
     property alias spazi: dati.spazi
     property alias angoli: dati.angoli
-    property alias dock: dati.dock
     property alias secondi: dati.secondi
     property alias meteo: dati.meteo
     property alias citta: dati.citta
@@ -60,7 +59,6 @@ Singleton {
             property bool affianca: false
             property int spazi: 12
             property int angoli: 18
-            property bool dock: true
             property bool secondi: false
             property bool meteo: true
             property string citta: ""

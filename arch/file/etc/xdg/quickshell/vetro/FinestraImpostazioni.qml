@@ -22,7 +22,7 @@ FloatingWindow {
         { id: "generale",   nome: "Generale",         icona: "home" },
         { id: "aspetto",    nome: "Aspetto",          icona: "palette" },
         { id: "finestre",   nome: "Finestre",         icona: "select_window" },
-        { id: "barra",      nome: "Barra e dock",     icona: "dock_to_bottom" },
+        { id: "barra",      nome: "Barra",            icona: "dock_to_bottom" },
         { id: "cruscotto",  nome: "Cruscotto e meteo", icona: "partly_cloudy_day" },
         { id: "notifiche",  nome: "Notifiche",        icona: "notifications" },
         { id: "blocco",     nome: "Blocco schermo",   icona: "lock" },
@@ -437,17 +437,12 @@ FloatingWindow {
             spacing: 16
             Gruppo {
                 Riga {
-                    titolo: "Dock in basso"
-                    sottotitolo: "Le app preferite e quelle aperte"
-                    Interruttore { acceso: Opzioni.dock; onCambiato: v => Opzioni.dock = v }
-                }
-                Riga {
                     titolo: "Secondi nell'orologio"
-                    sottotitolo: "Nella barra in alto"
+                    sottotitolo: "Nella barra in basso"
                     Interruttore { acceso: Opzioni.secondi; onCambiato: v => Opzioni.secondi = v }
                 }
             }
-            Titolo { testo: "App nel dock" }
+            Titolo { testo: "App nella barra" }
             Gruppo {
                 Repeater {
                     model: Opzioni.preferite
@@ -470,7 +465,7 @@ FloatingWindow {
                     }
                 }
             }
-            Titolo { testo: "Aggiungi un'app al dock" }
+            Titolo { testo: "Aggiungi un'app alla barra" }
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 40
@@ -504,7 +499,7 @@ FloatingWindow {
                         titolo: modelData.name
                         sottotitolo: modelData.genericName || modelData.comment || ""
                         Pulsante {
-                            testo: Opzioni.preferite.indexOf(modelData.id) >= 0 ? "Già nel dock" : "Aggiungi"
+                            testo: Opzioni.preferite.indexOf(modelData.id) >= 0 ? "Già nella barra" : "Aggiungi"
                             icona: "add"
                             onCliccato: {
                                 if (Opzioni.preferite.indexOf(modelData.id) >= 0) return;
@@ -654,7 +649,7 @@ FloatingWindow {
             id: paginaSchermo
             spacing: 16
 
-            // uno per ogni schermo collegato (barra, dock e sfondo ci sono su tutti)
+            // uno per ogni schermo collegato (barra e sfondo ci sono su tutti)
             Repeater {
                 model: Opzioni.schermi
                 delegate: Gruppo {
