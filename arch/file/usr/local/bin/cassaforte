@@ -1,5 +1,5 @@
 #!/usr/bin/python3 -I
-# Cassaforte (creata da lfs.sh): una cartella cifrata che si apre con una password.
+# Cassaforte (creata da vetro-arch.sh): una cartella cifrata che si apre con una password.
 # Usa la cifratura del file system ext4 (fscrypt, criteri versione 2, AES-256):
 # quando e' chiusa, i file e i loro nomi sul disco sono illeggibili.
 #   cassaforte            apre o chiude (con le finestre)

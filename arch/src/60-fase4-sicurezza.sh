@@ -11,7 +11,16 @@ FILE_SICUREZZA="etc/modules-load.d/vetro.conf usr/local/sbin/firewall-avvia
                 usr/share/applications/fantasma.desktop usr/share/applications/guardiano-regole.desktop"
 FILE_UTENTE_FANTASMA="etc/systemd/system/home-fantasma.mount etc/systemd/system/fantasma-casa.service
                       etc/sudoers.d/31-utente-fantasma usr/local/share/fantasma/casa"
-FASE4=("fantasma|f4_fantasma|$(echo $FILE_SICUREZZA)"
+FILE_VPN="usr/local/sbin/vpn-aiuto usr/local/bin/vpn etc/systemd/system/vpn.service
+          etc/sudoers.d/20-vpn usr/share/applications/vpn.desktop"
+FILE_CASSAFORTE="usr/local/bin/cassaforte usr/share/applications/cassaforte.desktop
+                 usr/share/applications/cassaforte-chiudi.desktop"
+# DNS, VPN e cassaforte PRIMA della modalita' fantasma: accesa di serie, scrive il DNS
+# verso Tor, e dopo non si deve piu' toccare systemd-resolved (installazione senza DNS)
+FASE4=("dns|f4_dns|etc/systemd/resolved.conf.d/10-vetro-dns.conf"
+       "vpn|f4_vpn|$(echo $FILE_VPN)"
+       "cassaforte|f4_cassaforte|$(echo $FILE_CASSAFORTE)"
+       "fantasma|f4_fantasma|$(echo $FILE_SICUREZZA)"
        "utente-fantasma|f4_utente_fantasma|$(echo $FILE_UTENTE_FANTASMA)")
 
 # installa solo i pacchetti che mancano: "pacman -T" guarda anche chi li fornisce (es.
@@ -21,6 +30,44 @@ installa_se_mancano() {
     mancano=$(esegui pacman -T "$@") || true
     # shellcheck disable=SC2086
     if [ -n "$mancano" ]; then installa_pacchetti $mancano; fi
+}
+
+# il DNS cifrato (Quad9, DNS-over-TLS): vale dal prossimo avvio (systemd-resolved non
+# si riavvia adesso, cosi' l'installazione non resta senza nomi se la rete blocca il TLS)
+f4_dns() {
+    installa_file etc/systemd/resolved.conf.d/10-vetro-dns.conf
+    ok "DNS cifrato (Quad9), dal prossimo avvio"
+}
+
+# la VPN WireGuard: si sceglie il file e si accende dal menu (VPN)
+f4_vpn() {
+    installa_se_mancano wireguard-tools
+    # wg-quick passa i DNS della VPN a "resolvconf": con systemd-resolved e' systemd-resolvconf
+    if [ -n "$(esegui pacman -T resolvconf || true)" ]; then
+        installa_pacchetti systemd-resolvconf
+    fi
+    # shellcheck disable=SC2086
+    installa_file $FILE_VPN
+    esegui visudo -cf "$(percorso /etc/sudoers.d/20-vpn)"
+    ok "VPN WireGuard (si accende dal menu: VPN)"
+}
+
+# la cassaforte usa la cifratura di ext4 (fscrypt): serve la funzione "encrypt" del disco
+f4_cassaforte() {
+    local tipo disco caratteristiche
+    tipo=$(esegui findmnt -no FSTYPE -T /home 2>/dev/null || true)
+    if [ "$tipo" != ext4 ]; then
+        avviso "La cassaforte ha bisogno di ext4: la salto"
+        return 0
+    fi
+    disco=$(esegui findmnt -no SOURCE -T /home)
+    caratteristiche=$(esegui dumpe2fs -h "$disco" 2>/dev/null || true)
+    if ! grep -qw encrypt <<<"$caratteristiche"; then
+        esegui tune2fs -O encrypt "$disco"
+    fi
+    # shellcheck disable=SC2086
+    installa_file $FILE_CASSAFORTE
+    ok "Cassaforte (cartella cifrata)"
 }
 
 f4_fantasma() {

@@ -1,5 +1,5 @@
 #!/usr/bin/python3 -I
-# Aiutante della VPN (creato da lfs.sh). Gira come root (con sudo, senza password
+# Aiutante della VPN (creato da vetro-arch.sh). Gira come root (con sudo, senza password
 # per il gruppo wheel) e sa fare solo queste cose:
 #   vpn-aiuto importa < file.conf   controlla il file WireGuard e lo salva
 #   vpn-aiuto accendi | spegni | stato

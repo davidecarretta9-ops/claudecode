@@ -1,5 +1,5 @@
 [Unit]
-Description=VPN WireGuard (lfs.sh)
+Description=VPN WireGuard (vetro-arch.sh)
 After=network-online.target firewall.service
 Wants=network-online.target
 

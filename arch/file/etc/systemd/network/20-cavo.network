@@ -1,9 +1,17 @@
-# Rete via cavo (creato da vetro-arch.sh): indirizzo automatico (DHCP)
+# Rete via cavo (creato da vetro-arch.sh): indirizzo automatico (DHCP). Niente DNS del
+# router (si usa quello cifrato), il nome del computer non va al router, IPv6 con
+# indirizzi temporanei.
 [Match]
 Name=en* eth*
 
 [Network]
 DHCP=yes
+IPv6PrivacyExtensions=yes
 
 [DHCPv4]
 RouteMetric=100
+UseDNS=no
+SendHostname=no
+
+[IPv6AcceptRA]
+UseDNS=no

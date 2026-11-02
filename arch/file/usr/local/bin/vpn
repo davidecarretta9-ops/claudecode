@@ -1,5 +1,5 @@
 #!/bin/bash
-# VPN (creato da lfs.sh): accendi, spegni o configura la VPN WireGuard.
+# VPN (creato da vetro-arch.sh): accendi, spegni o configura la VPN WireGuard.
 #   vpn             finestra con lo stato e i pulsanti
 #   vpn configura   scegli il file .conf della tua VPN e accendila
 AIUTO=/usr/local/sbin/vpn-aiuto
