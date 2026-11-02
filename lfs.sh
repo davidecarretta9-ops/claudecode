@@ -12701,6 +12701,15 @@ if [ "$scelta" = vetro ] && command -v Hyprland >/dev/null && command -v quicksh
     mkdir -p "$CONF/hypr" "$CONF/vetro"
     [ -f "$CONF/hypr/personale.conf" ] || printf '# Le tue modifiche a Hyprland (le legge per ultime)\n' > "$CONF/hypr/personale.conf"
     [ -f "$CONF/hypr/vetro-impostazioni.conf" ] || cp /etc/xdg/hypr/vetro-impostazioni.conf "$CONF/hypr/vetro-impostazioni.conf"
+    # risoluzione di partenza: nelle macchine virtuali 1920x1080. All'accensione QEMU
+    # propone spesso 800x600 (la sua finestra non ha ancora detto quanto e' grande) e
+    # con l'accesso automatico Hyprland parte proprio in quel momento. Se la scegli tu
+    # in Impostazioni -> Schermo vale la tua (e' scritta dopo, in vetro-impostazioni.conf)
+    if systemd-detect-virt -q 2>/dev/null; then
+        echo "monitor = , 1920x1080, auto, 1" > "$CONF/hypr/vetro-schermo.conf"
+    else
+        echo "# su un PC vero: la risoluzione migliore dello schermo (vetro.conf)" > "$CONF/hypr/vetro-schermo.conf"
+    fi
     unset WLR_RENDERER WLR_NO_HARDWARE_CURSORS
     # il registro della volta prima resta (se Hyprland si e' bloccato, il motivo e' li')
     [ -f "$HOME/.cache/hyprland.log" ] && mv -f "$HOME/.cache/hyprland.log" "$HOME/.cache/hyprland-prima.log"
@@ -12735,7 +12744,7 @@ fi
 # pannelli, finestre, plugin). Lo raccoglie "sudo ./lfs.sh registri" dal tuo PC.
 ( sleep 25
   { echo "== $(date '+%F %T')"
-    for c in version devices layers clients workspaces cursorpos "plugin list"; do
+    for c in version monitors devices layers clients workspaces cursorpos "plugin list"; do
       echo; echo "== hyprctl $c"; hyprctl $c
     done
   } > "$HOME/.cache/vetro-diagnosi.txt" 2>&1 ) &
@@ -13300,6 +13309,8 @@ cat > /etc/xdg/hypr/vetro.conf << "EOF"
 # ~/.config/hypr/vetro-impostazioni.conf. Tutti e due li crea vuoti avvia-desktop.
 
 monitor = , preferred, auto, 1
+# (nelle macchine virtuali 1920x1080: lo scrive avvia-desktop in vetro-schermo.conf,
+# letto piu' sotto. La risoluzione scelta in Impostazioni -> Schermo vale su tutte)
 
 # --- ambiente --------------------------------------------------------------------
 env = XCURSOR_SIZE, 24
@@ -13513,6 +13524,9 @@ exec-once = /usr/local/bin/avvio-vetro
 
 # le barre del titolo delle finestre (plugin hyprbars, se si e' compilato)
 source = /etc/xdg/hypr/vetro-barre.conf
+
+# la risoluzione di partenza (la scrive avvia-desktop a ogni accesso)
+source = ~/.config/hypr/vetro-schermo.conf
 
 # le scelte fatte da Impostazioni, poi le tue modifiche
 source = ~/.config/hypr/vetro-impostazioni.conf
