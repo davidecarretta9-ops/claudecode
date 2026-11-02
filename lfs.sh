@@ -13729,7 +13729,8 @@ ClippingRectangle {
 }
 EOF
 cat > "$d/Avvio.qml" << "EOF"
-// Cerca e apri le app (creato da lfs.sh, Fase 10): tasto Windows o Windows+Spazio. Scrivi, scegli con le frecce e premi Invio. Senza
+// Cerca e apri le app (creato da lfs.sh, Fase 10): tasto Windows, Windows+Spazio o
+// l'icona in alto a sinistra. Scrivi, scegli con le frecce e premi Invio. Senza
 // scrivere niente mostra tutte le app (come il Launchpad).
 import QtQuick
 import QtQuick.Layouts
@@ -13963,9 +13964,9 @@ Singleton {
 }
 EOF
 cat > "$d/Barra.qml" << "EOF"
-// La barra in alto (creato da lfs.sh, Fase 10): al centro data e ora (aprono il
-// cruscotto), a destra volume, notifiche e il centro di controllo. Le app si cercano
-// col tasto Windows.
+// La barra in alto (creato da lfs.sh, Fase 10): a sinistra le app e le scrivanie,
+// al centro data e ora (aprono il cruscotto). Centro di controllo (volume, musica,
+// modalita' fantasma...) e notifiche: Windows+A e Windows+N.
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -13998,6 +13999,90 @@ PanelWindow {
     Component.onCompleted: Stato.barre = Stato.barre.concat([barra])
     Component.onDestruction: Stato.barre = Stato.barre.filter(b => b !== barra)
 
+    // ---------------------------------------------------------------- a sinistra
+    Rectangle {
+        id: sinistra
+        anchors.left: parent.left
+        anchors.leftMargin: 10
+        anchors.top: parent.top
+        anchors.topMargin: 6
+        height: 36
+        width: filaSinistra.width + 12
+        radius: height / 2
+        color: Tema.fondo
+        border.width: 1
+        border.color: Tema.bordo
+        Behavior on width { NumberAnimation { duration: Tema.media; easing.type: Easing.OutCubic } }
+
+        Row {
+            id: filaSinistra
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.left: parent.left
+            anchors.leftMargin: 6
+            spacing: 8
+
+            // le app (come lo Start o il Launchpad)
+            Rectangle {
+                width: 28; height: 28; radius: 14
+                anchors.verticalCenter: parent.verticalCenter
+                color: areaApp.containsMouse || Stato.avvio ? Tema.cartaSopra : "transparent"
+                Behavior on color { ColorAnimation { duration: Tema.veloce } }
+                Icona { anchors.centerIn: parent; nome: "apps"; dimensione: 19 }
+                MouseArea {
+                    id: areaApp
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: Stato.alterna("avvio")
+                }
+            }
+
+            // le scrivanie: un pallino per ognuna, quella attiva e' piu' lunga
+            Row {
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 5
+                Repeater {
+                    model: ScriptModel {
+                        values: {
+                            const l = Hyprland.workspaces.values.filter(w => w.id > 0);
+                            return l.length > 0 ? l : [];
+                        }
+                    }
+                    delegate: Rectangle {
+                        required property var modelData
+                        readonly property bool attiva: modelData.focused || modelData.active
+                        anchors.verticalCenter: parent.verticalCenter
+                        height: 8
+                        width: attiva ? 26 : 8
+                        radius: 4
+                        color: attiva ? Tema.accento : (modelData.toplevels.values.length > 0 ? Tema.testo2 : Tema.testo3)
+                        Behavior on width { NumberAnimation { duration: Tema.media; easing.type: Easing.OutBack; easing.overshoot: 1.4 } }
+                        Behavior on color { ColorAnimation { duration: Tema.media } }
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -5
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: parent.modelData.activate()
+                        }
+                    }
+                }
+            }
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: text !== ""
+                width: Math.min(implicitWidth, 320)
+                elide: Text.ElideRight
+                text: Hyprland.activeToplevel ? Hyprland.activeToplevel.title : ""
+                font.family: Tema.carattere
+                font.pixelSize: 13
+                font.weight: Font.Medium
+                color: Tema.testo2
+                rightPadding: 6
+            }
+        }
+    }
+
     // ---------------------------------------------------------------- al centro
     Rectangle {
         id: centro
@@ -14028,138 +14113,6 @@ PanelWindow {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: Stato.alterna("cruscotto")
-        }
-    }
-
-    // ---------------------------------------------------------------- a destra
-    Rectangle {
-        id: destra
-        anchors.right: parent.right
-        anchors.rightMargin: 10
-        anchors.top: parent.top
-        anchors.topMargin: 6
-        height: 36
-        width: filaDestra.width + 16
-        radius: height / 2
-        color: Tema.fondo
-        border.width: 1
-        border.color: Tema.bordo
-        Behavior on width { NumberAnimation { duration: Tema.media; easing.type: Easing.OutCubic } }
-
-        Row {
-            id: filaDestra
-            anchors.centerIn: parent
-            spacing: 4
-
-            // modalita' fantasma accesa
-            Rectangle {
-                visible: Sistema.fantasma
-                anchors.verticalCenter: parent.verticalCenter
-                height: 24
-                width: testoFantasma.implicitWidth + 30
-                radius: 12
-                color: Qt.rgba(0.62, 0.42, 1, 0.28)
-                Row {
-                    anchors.centerIn: parent
-                    spacing: 4
-                    Icona { nome: "visibility_off"; dimensione: 15; anchors.verticalCenter: parent.verticalCenter }
-                    Text {
-                        id: testoFantasma
-                        text: "Fantasma"
-                        font.family: Tema.carattere
-                        font.pixelSize: 12
-                        font.weight: Font.DemiBold
-                        color: Tema.testo
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: Quickshell.execDetached(["/usr/local/bin/fantasma"])
-                }
-            }
-
-            // musica: titolo e play/pausa
-            Rectangle {
-                visible: Musica.attivo !== null && Musica.titolo !== ""
-                anchors.verticalCenter: parent.verticalCenter
-                height: 28
-                width: Math.min(220, filaMusica.implicitWidth + 16)
-                radius: 14
-                color: areaMusica.containsMouse ? Tema.cartaForte : "transparent"
-                clip: true
-                Row {
-                    id: filaMusica
-                    anchors.verticalCenter: parent.verticalCenter
-                    x: 8
-                    spacing: 6
-                    Icona {
-                        nome: Musica.suona ? "pause" : "play_arrow"
-                        dimensione: 17
-                        piena: true
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                    Text {
-                        text: Musica.titolo + (Musica.artista !== "" ? "  ·  " + Musica.artista : "")
-                        font.family: Tema.carattere
-                        font.pixelSize: 12
-                        color: Tema.testo2
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                }
-                MouseArea {
-                    id: areaMusica
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: Musica.alterna()
-                }
-            }
-
-            BottoneBarra {
-                icona: Audio.icona
-                onCliccato: Audio.alternaMuto()
-                onRotella: su => Audio.imposta(Audio.volume + (su ? 0.05 : -0.05))
-            }
-            BottoneBarra {
-                icona: Opzioni.nonDisturbare ? "notifications_off"
-                       : (Avvisi.quante > 0 ? "notifications_unread" : "notifications")
-                onCliccato: Stato.alterna("pannello")
-            }
-            BottoneBarra {
-                icona: "tune"
-                attivo: Stato.pannello
-                onCliccato: Stato.alterna("pannello")
-            }
-        }
-    }
-
-    component BottoneBarra: Rectangle {
-        id: bottone
-        property string icona: "circle"
-        property bool attivo: false
-        signal cliccato()
-        signal rotella(bool su)
-        width: 30
-        height: 28
-        radius: 14
-        anchors.verticalCenter: parent ? parent.verticalCenter : undefined
-        color: attivo ? Tema.accento : (areaB.containsMouse ? Tema.cartaForte : "transparent")
-        Behavior on color { ColorAnimation { duration: Tema.veloce } }
-        Icona {
-            anchors.centerIn: parent
-            nome: bottone.icona
-            dimensione: 18
-            color: bottone.attivo ? Tema.suAccento : Tema.testo
-        }
-        MouseArea {
-            id: areaB
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: bottone.cliccato()
-            onWheel: e => bottone.rotella(e.angleDelta.y > 0)
         }
     }
 }
