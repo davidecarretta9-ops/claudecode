@@ -1,6 +1,6 @@
 pragma Singleton
 // Le notifiche (creato da lfs.sh, Fase 10): prende il posto di mako. Quelle nuove
-// compaiono in alto a destra per qualche secondo, poi restano nel centro di controllo.
+// compaiono in basso a destra per qualche secondo, poi restano nel centro di controllo.
 import QtQuick
 import Quickshell
 import Quickshell.Services.Notifications

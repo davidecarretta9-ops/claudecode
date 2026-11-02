@@ -118,7 +118,8 @@ sudo bash /mnt/vetro/vetro-arch.sh
 - Poi: `reboot`. Compare la schermata di accesso di Vetro.
 
 La **modalità fantasma è accesa di serie**: internet passa tutto da Tor (più
-lento). La spegni dal centro di controllo (in alto a destra) → *Modalità fantasma*.
+lento). La spegni dal centro di controllo (clic sulla pillola con Wi-Fi e volume, in
+basso a destra nella barra) → *Modalità fantasma*.
 
 ## Se qualcosa non va
 
