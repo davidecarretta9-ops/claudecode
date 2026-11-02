@@ -45,7 +45,7 @@ Item {
         radius: height / 2
         color: Qt.rgba(0.059, 0.137, 0.251, 0.85)          // #0f2340
         border.width: 1
-        border.color: pillola.errore !== "" ? Qt.rgba(1, 0.42, 0.42, 0.8)
+        border.color: pillola.errore !== "" && campo.text === "" ? Qt.rgba(1, 0.42, 0.42, 0.8)
                       : Qt.rgba(1, 1, 1, campo.activeFocus ? 0.24 : 0.12)
 
         TextInput {

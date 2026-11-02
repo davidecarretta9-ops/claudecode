@@ -630,11 +630,6 @@ FloatingWindow {
                     }
                 }
                 Riga {
-                    titolo: "Numeri sul blocco schermo"
-                    sottotitolo: "Notifiche, processore e memoria in basso a sinistra"
-                    Interruttore { acceso: Opzioni.statisticheBlocco; onCambiato: v => Opzioni.statisticheBlocco = v }
-                }
-                Riga {
                     titolo: "Blocca adesso"
                     sottotitolo: "Anche con Windows+L"
                     Pulsante { testo: "Blocca"; icona: "lock"; onCliccato: { Stato.impostazioni = false; Stato.blocca(); } }

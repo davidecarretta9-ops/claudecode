@@ -27,7 +27,6 @@ Singleton {
     property alias citta: dati.citta
     property alias nonDisturbare: dati.nonDisturbare
     property alias bloccoMinuti: dati.bloccoMinuti
-    property alias statisticheBlocco: dati.statisticheBlocco
     property alias preferite: dati.preferite
     property alias nomeMostrato: dati.nomeMostrato
     property bool caricato: false
@@ -64,7 +63,6 @@ Singleton {
             property string citta: ""
             property bool nonDisturbare: false
             property int bloccoMinuti: 10
-            property bool statisticheBlocco: true
             property string nomeMostrato: ""
             property list<string> preferite: [
                 "tor-browser", "thunar", "thunderbird", "org.mozilla.Thunderbird",
