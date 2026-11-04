@@ -27,6 +27,14 @@ QtObject {
             description: Tr.tr("Wallpaper, fonts, colours"),
             category: "appearance"
         },
+        // oversicaOS
+        {
+            label: "Schermo",
+            icon: "monitor",
+            description: "Luminosita', luce notturna, risoluzione, piu' schermi",
+            category: "appearance",
+            chiave: "schermo"
+        },
 
         // Connectivity
         // TODO
@@ -58,8 +66,24 @@ QtObject {
             description: Tr.tr("App volumes, sound devices"),
             category: "connectivity"
         },
+        // oversicaOS
+        {
+            label: "Tastiera, mouse e touchpad",
+            icon: "keyboard",
+            description: "Disposizione dei tasti, velocita', tocco per clic",
+            category: "connectivity",
+            chiave: "tastiera"
+        },
 
         // System
+        // oversicaOS
+        {
+            label: "Accessibilita'",
+            icon: "accessibility_new",
+            description: "Testo piu' grande, meno animazioni",
+            category: "system",
+            chiave: "accessibilita"
+        },
         {
             label: Tr.tr("Updates"),
             icon: "update",

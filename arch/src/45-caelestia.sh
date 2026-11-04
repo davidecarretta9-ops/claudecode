@@ -62,7 +62,7 @@ applica_ritocchi() {
 }
 
 # I pacchetti ufficiali che servono a Caelestia (compilarlo e usarlo)
-PKG_CAELESTIA=(git gettext cmake ninja pkgconf qt6-base qt6-declarative qt6-imageformats
+PKG_CAELESTIA=(git gettext cmake ninja pkgconf hyprsunset qt6-base qt6-declarative qt6-imageformats
                qt6-multimedia qt6-shadertools qt6-svg qt6-wayland pipewire libqalculate aubio
                cava ddcutil brightnessctl lm_sensors power-profiles-daemon networkmanager
                fish swappy grim slurp wl-clipboard cliphist fuzzel ffmpeg libnotify glib2

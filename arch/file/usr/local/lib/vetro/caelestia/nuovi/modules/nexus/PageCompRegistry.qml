@@ -51,6 +51,14 @@ QtObject {
                 }
             }
         },
+        Component {
+            // Schermo (oversicaOS)
+            StackPage {
+                Component {
+                    SchermoPage {}
+                }
+            }
+        },
 
         // Connectivity
         Component {
@@ -104,8 +112,24 @@ QtObject {
                 }
             }
         },
+        Component {
+            // Tastiera, mouse e touchpad (oversicaOS)
+            StackPage {
+                Component {
+                    TastieraPage {}
+                }
+            }
+        },
 
         // System
+        Component {
+            // Accessibilita' (oversicaOS)
+            StackPage {
+                Component {
+                    AccessibilitaPage {}
+                }
+            }
+        },
         Component {
             PlaceholderComp {}
         },

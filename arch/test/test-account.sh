@@ -116,7 +116,29 @@ test_pagina_account() {
     else fallita "AccountPage.qml: errori di sintassi o manca qmllint"; fi
 }
 
+# Task 14: Schermo, Tastiera e Accessibilita' (le scelte per Hyprland le scrive ImpostazioniOversica)
+test_pagine_schermo_tastiera_accessibilita() {
+    local s p
+    radice_finta; s="$RADICE/sorgente"; mkdir -p "$s"
+    cp -a "$QUI_TEST/caelestia-originali/." "$s/"
+    ( CAELESTIA_RITOCCHI="$F/usr/local/lib/vetro/caelestia" applica_ritocchi "$s" ) >/dev/null 2>&1
+    for p in Schermo Tastiera Accessibilita; do
+        esiste "$s/modules/nexus/pages/${p}Page.qml"
+        contiene "$s/modules/nexus/PageCompRegistry.qml" "${p}Page {"
+        contiene "$s/modules/nexus/pages/${p}Page.qml" "ImpostazioniOversica"
+    done
+    contiene "$s/modules/nexus/PageRegistry.qml" 'label: "Schermo"'
+    contiene "$s/modules/nexus/PageRegistry.qml" 'label: "Tastiera, mouse e touchpad"'
+    contiene "$s/modules/nexus/PageRegistry.qml" "label: \"Accessibilita'\""
+    contiene "$s/services/ImpostazioniOversica.qml" "HyprImpostazioni.impostazioni("
+    contiene "$s/services/ImpostazioniOversica.qml" "hyprctl reload"
+    contiene "$s/daemons/Oversica.qml" "ImpostazioniOversica.avvia()"
+    contiene "$s/modules/nexus/pages/SchermoPage.qml" "luceNotturna"
+    case " ${PKG_CAELESTIA[*]} " in *" hyprsunset "*) ok_prova "hyprsunset tra i pacchetti" ;; *) fallita "manca hyprsunset" ;; esac
+}
+
 prova test_pubblica_avatar
+prova test_pagine_schermo_tastiera_accessibilita
 prova test_pubblica_rifiuta
 prova test_sudoers_solo_aiutante
 prova test_patch_registro_allineato

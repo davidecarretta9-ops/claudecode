@@ -589,8 +589,42 @@ class ProvaHyprJs(unittest.TestCase):
 
     def test_impostazioni_predefinite_come_il_file(self):
         t = js(self.m, "impostazioni({animazioni: true, angoli: 18, sfocatura: true, spazi: 12, "
-                       "affianca: false}, [], {})")
+                       "affianca: false, tastiera: 'it', velocita: 0, naturale: true, tocco: true}, [], {})")
         self.assertEqual(t, (FILE / "etc/xdg/hypr/vetro-impostazioni.lua").read_text())
+        # senza scelte (prima volta) e' lo stesso file
+        self.assertEqual(js(self.m, "impostazioni({}, [], {})"), t)
+
+    def carica(self, o):
+        t = js(self.m, "impostazioni(%s, [], {})" % json.dumps(o))
+        f = pathlib.Path(tempfile.mkdtemp()) / "i.lua"
+        self.addCleanup(shutil.rmtree, f.parent)
+        f.write_text(t)
+        h = Hyprland().esegui_file(f)
+        self.assertEqual(h.errori, [])
+        return h
+
+    def test_tastiera_us(self):
+        h = self.carica({"tastiera": "us"})
+        self.assertEqual(h.config["input.kb_layout"], "us")
+        # una disposizione strana non entra nel file: resta quella italiana
+        h = self.carica({"tastiera": 'it" }) hl.exec_cmd("rm'})
+        self.assertEqual(h.config["input.kb_layout"], "it")
+
+    def test_velocita(self):
+        self.assertEqual(self.carica({"velocita": 0.5}).config["input.sensitivity"], 0.5)
+        self.assertEqual(self.carica({"velocita": 7}).config["input.sensitivity"], 1)
+        self.assertEqual(self.carica({"velocita": "x"}).config["input.sensitivity"], 0)
+
+    def test_touchpad(self):
+        h = self.carica({"naturale": False, "tocco": False})
+        self.assertIs(h.config["input.touchpad.natural_scroll"], False)
+        self.assertIs(h.config["input.touchpad.tap_to_click"], False)
+        h = self.carica({})
+        self.assertIs(h.config["input.touchpad.natural_scroll"], True)
+        self.assertIs(h.config["input.touchpad.tap_to_click"], True)
+
+    def test_meno_animazioni(self):
+        self.assertIs(self.carica({"animazioni": False}).config["animations.enabled"], False)
 
     def test_impostazioni_scelte(self):
         t = js(self.m, "impostazioni({animazioni: false, angoli: 0, sfocatura: false, spazi: 5, "

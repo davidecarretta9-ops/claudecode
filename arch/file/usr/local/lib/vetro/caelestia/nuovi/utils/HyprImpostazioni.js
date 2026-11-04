@@ -1,9 +1,11 @@
 .pragma library
-// Quello che i pannelli scrivono per Hyprland 0.57, che parla solo Lua (creato da lfs.sh).
+// oversicaOS: quello che le Impostazioni scrivono per Hyprland 0.57, che parla solo Lua
+// (creato da lfs.sh).
 //  - i comandi per Hyprland.dispatch(...): riduci, sposta, fuoco, inCima. Se l'indirizzo
 //    della finestra e' strano tornano "" (e non si manda niente)
 //  - schermi(...): le regole per piu' schermi
-//  - impostazioni(...): tutto ~/.config/hypr/vetro-impostazioni.lua (lo scrive Opzioni.qml)
+//  - impostazioni(...): tutto ~/.config/hypr/vetro-impostazioni.lua (lo scrive il servizio
+//    ImpostazioniOversica, per le pagine Schermo, Tastiera e Accessibilita')
 
 // un testo tra virgolette, scritto come lo legge Lua
 function testo(s) {
@@ -98,20 +100,47 @@ function schermi(elenco, scelte) {
 }
 
 // --- il file delle impostazioni -------------------------------------------------------
-//   o: { animazioni, angoli, sfocatura, spazi, affianca } (da Opzioni.qml)
-function impostazioni(o, elenco, scelte) {
+//   o: { animazioni, angoli, sfocatura, spazi, affianca, tastiera, velocita, naturale, tocco }
+//   quelle che mancano o non valgono prendono il valore di partenza (PREDEFINITE)
+const PREDEFINITE = {
+    animazioni: true, angoli: 18, sfocatura: true, spazi: 12, affianca: false,
+    tastiera: "it", velocita: 0, naturale: true, tocco: true
+};
+
+function scelte(o) {
+    o = o || {};
+    const s = Object.assign({}, PREDEFINITE);
+    for (const k of ["animazioni", "sfocatura", "affianca", "naturale", "tocco"])
+        if (typeof o[k] === "boolean")
+            s[k] = o[k];
+    for (const k of ["angoli", "spazi"])
+        if (Number.isFinite(Number(o[k])) && o[k] !== null && o[k] !== "")
+            s[k] = Math.max(0, Math.min(50, Math.round(Number(o[k]))));
+    if (typeof o.velocita === "number" && Number.isFinite(o.velocita))
+        s.velocita = Math.max(-1, Math.min(1, Math.round(o.velocita * 100) / 100));
+    // una o piu' disposizioni della tastiera ("it", "us", "it,us"), solo lettere
+    if (typeof o.tastiera === "string" && /^[a-z]{2,3}(,[a-z]{2,3})*$/.test(o.tastiera))
+        s.tastiera = o.tastiera;
+    return s;
+}
+
+function impostazioni(o, elenco, scelteSchermi) {
+    const s = scelte(o);
     const si = v => (v ? "true" : "false");
-    let t = "-- Creato da Impostazioni (desktop Vetro): non modificarlo a mano,\n";
+    let t = "-- Creato da Impostazioni (oversicaOS): non modificarlo a mano,\n";
     t += "-- le tue aggiunte vanno in ~/.config/hypr/personale.lua\n";
-    t += schermi(elenco, scelte);
+    t += schermi(elenco, scelteSchermi);
     t += "hl.config({\n";
-    t += "    animations = { enabled = " + si(o.animazioni) + " },\n";
-    t += "    decoration = { rounding = " + Math.round(Number(o.angoli) || 0)
-        + ", blur = { enabled = " + si(o.sfocatura) + " } },\n";
-    t += "    general = { gaps_in = " + Math.round((Number(o.spazi) || 0) / 2)
-        + ", gaps_out = " + Math.round(Number(o.spazi) || 0) + " },\n";
+    t += "    animations = { enabled = " + si(s.animazioni) + " },\n";
+    t += "    decoration = { rounding = " + s.angoli + ", blur = { enabled = " + si(s.sfocatura) + " } },\n";
+    t += "    general = { gaps_in = " + Math.round(s.spazi / 2) + ", gaps_out = " + s.spazi + " },\n";
+    t += "    input = {\n";
+    t += "        kb_layout = " + testo(s.tastiera) + ",\n";
+    t += "        sensitivity = " + s.velocita + ",\n";
+    t += "        touchpad = { natural_scroll = " + si(s.naturale) + ", tap_to_click = " + si(s.tocco) + " },\n";
+    t += "    },\n";
     t += "})\n";
-    if (!o.affianca) {
+    if (!s.affianca) {
         t += "-- le finestre si aprono libere (non affiancate), come su macOS e Windows\n";
         t += 'hl.window_rule({ name = "vetro-finestre-libere", match = { class = ".*" }, float = true })\n';
     }
