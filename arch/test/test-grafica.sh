@@ -12,18 +12,6 @@ test_carattere() {
     contiene "$F/usr/share/fonts/dm-sans/OFL.txt" "SIL OPEN FONT LICENSE"
 }
 
-test_tema() {
-    contiene "$V/Tema.qml" 'id: "vetro"'
-    contiene "$V/Tema.qml" '"#1a8cff"'
-    contiene "$V/Tema.qml" 'readonly property string carattere: "DM Sans"'
-    contiene "$V/Tema.qml" "appFondo"
-    contiene "$V/Tema.qml" "altezzaBarra: 48"
-    contiene "$V/Tema.qml" "staccoBarra: 8"
-    contiene "$V/Opzioni.qml" 'property string tema: "vetro"'
-    contiene "$V/Opzioni.qml" "property int angoli: 18"
-    contiene "$V/Opzioni.qml" "property real opacita: 0.92"
-}
-
 test_logo() {
     contiene "$F/usr/share/icons/hicolor/scalable/apps/vetro.svg" "<svg"
     contiene "$F/usr/share/icons/hicolor/scalable/apps/vetro.svg" "creato da vetro-arch.sh"
@@ -171,7 +159,6 @@ prova test_sfondo_di_partenza
 prova test_f2_senza_disegna_vetro
 prova test_fc_cache_dopo_caratteri
 prova test_carattere
-prova test_tema
 prova test_logo
 prova test_gtk
 prova test_gtk_arancio

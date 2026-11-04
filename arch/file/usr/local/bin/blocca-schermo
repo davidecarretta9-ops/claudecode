@@ -1,6 +1,6 @@
 #!/bin/bash
 # Blocca lo schermo (creato da lfs.sh): per sbloccare scrivi la tua password e premi Invio.
-# Nel desktop Vetro usa il blocco dei pannelli (orologio grande); se non risponde,
+# In oversicaOS usa il blocco di Caelestia; se non risponde,
 # o nel desktop classico, usa swaylock con lo stesso sfondo del desktop.
 #   blocca-schermo --attendi   solo swaylock, e aspetta finche' non sblocchi
 fondo=-f
@@ -8,7 +8,7 @@ if [ "${1:-}" = --attendi ]; then
   fondo=""
 else
   if pgrep -u "$(id -u)" -x Hyprland >/dev/null 2>&1 \
-     && qs -p /etc/xdg/quickshell/vetro ipc call blocco blocca >/dev/null 2>&1; then
+     && qs -c caelestia ipc call lock lock >/dev/null 2>&1; then
     exit 0
   fi
   pgrep -u "$(id -u)" -x swaylock >/dev/null && exit 0

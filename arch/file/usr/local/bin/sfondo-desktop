@@ -11,9 +11,9 @@ if [ "${1:-}" = --percorso ]; then
   echo "$img"
   exit 0
 fi
-# desktop Vetro: lo sfondo lo disegna Quickshell (con la dissolvenza)
+# oversicaOS: lo sfondo lo disegna Caelestia (si sceglie dal suo menu o da Impostazioni)
 if [ "${1:-}" != --swaybg ] && pgrep -u "$(id -u)" -x Hyprland >/dev/null 2>&1 \
-   && qs -p /etc/xdg/quickshell/vetro ipc call sfondo aggiorna >/dev/null 2>&1; then
+   && qs -c caelestia ipc call oversica ping >/dev/null 2>&1; then
   pkill -u "$(id -u)" -x swaybg
   exit 0
 fi

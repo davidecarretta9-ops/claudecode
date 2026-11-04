@@ -65,15 +65,11 @@ FINE
 }
 
 test_blocco_pam() {
-    contiene "$F/etc/xdg/quickshell/vetro/Blocco.qml" "PamContext"
-    non_contiene "$F/etc/xdg/quickshell/vetro/Blocco.qml" "vetro-password"
     contiene "$F/etc/pam.d/vetro-blocco" "auth include system-auth"
     contiene "$F/etc/pam.d/vetro-blocco" "account include system-auth"
 }
 
 test_aspetto_gnome() {
-    contiene "$F/etc/xdg/quickshell/vetro/Tema.qml" '{ id: "adwaita"'
-    contiene "$F/etc/xdg/quickshell/vetro/Opzioni.qml" 'property string tema: "vetro"'
     local g
     for g in gtk-3.0 gtk-4.0; do
         contiene "$F/etc/$g/settings.ini" "gtk-theme-name=Adwaita"
@@ -88,8 +84,6 @@ test_niente_lfs() {
     contiene "$F/usr/local/bin/avvia-desktop" "exec Hyprland -c /etc/xdg/hypr/vetro.lua"
     non_contiene "$F/usr/local/bin/avvia-pannelli" "xfce4-panel"
     non_contiene "$F/usr/local/bin/avvio-vetro" "submap"
-    non_contiene "$F/etc/xdg/quickshell/vetro/FinestraImpostazioni.qml" "scegli-desktop"
-    contiene "$F/etc/xdg/quickshell/vetro/Stato.qml" "property bool bloccato: false"
 }
 
 # curl finto che scrive "carattere" nel file chiesto con -o
@@ -126,7 +120,7 @@ test_f2_desktop() {
     finto fc-cache; curl_carattere
     FONT_ICONE_SHA256=$(printf carattere | sha256sum | cut -d' ' -f1)
     f2_desktop >/dev/null
-    esiste "$RADICE/etc/xdg/quickshell/vetro/shell.qml"
+    esiste "$RADICE/etc/xdg/quickshell/vetro/accesso.qml"
     esiste "$RADICE/etc/xdg/hypr/vetro.lua"
     esiste "$RADICE/etc/xdg/hypr/vetro-barre.lua"
     esiste "$RADICE/etc/pacman.d/hooks/vetro-barre.hook"
@@ -137,6 +131,22 @@ test_f2_desktop() {
     chiamato "compila_caelestia"
     esiste "$RADICE/usr/local/bin/oversica-config"
     esiste "$RADICE/usr/share/fonts/material-symbols/MaterialSymbolsRounded.ttf"
+}
+
+test_pannelli_vecchi_tolti() {
+    radice_finta; finto pacman; finto systemctl; finto python3; finto vetro-barre-aggiorna
+    finto fc-cache; curl_carattere; compilazione_finta_base
+    FONT_ICONE_SHA256=$(printf carattere | sha256sum | cut -d' ' -f1)
+    mkdir -p "$RADICE/etc/xdg/quickshell/vetro"
+    echo vecchio > "$RADICE/etc/xdg/quickshell/vetro/Barra.qml"
+    echo vecchio > "$RADICE/etc/xdg/quickshell/vetro/Hypr.js"
+    f2_desktop >/dev/null
+    non_esiste "$RADICE/etc/xdg/quickshell/vetro/Barra.qml"
+    non_esiste "$RADICE/etc/xdg/quickshell/vetro/Hypr.js"
+    esiste "$RADICE/etc/xdg/quickshell/vetro/accesso.qml"
+    non_esiste "$F/etc/xdg/quickshell/vetro/Pannello.qml"
+    contiene "$F/usr/local/bin/blocca-schermo" "qs -c caelestia ipc call lock lock"
+    contiene "$F/usr/local/bin/sfondo-desktop" "qs -c caelestia ipc call oversica ping"
 }
 
 test_qml() {
@@ -156,5 +166,6 @@ prova test_niente_lfs
 prova test_font_icone
 prova test_font_icone_sbagliato
 prova test_f2_desktop
+prova test_pannelli_vecchi_tolti
 prova test_qml
 riassunto

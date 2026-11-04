@@ -520,7 +520,8 @@ class ProvaComandiShell(unittest.TestCase):
 
     def test_nessun_dispatch_alla_vecchia(self):
         vecchi = []
-        for f in list((FILE / "etc/xdg/quickshell/vetro").glob("*")) + list((FILE / "usr/local/bin").glob("*")):
+        for f in (list((FILE / "etc/xdg/quickshell/vetro").glob("*")) + list((FILE / "usr/local/bin").glob("*"))
+                  + list((FILE / "usr/local/lib/vetro/caelestia").rglob("*"))):
             if f.is_file():
                 t = f.read_text(errors="replace")
                 for riga in t.splitlines():
@@ -532,21 +533,6 @@ class ProvaComandiShell(unittest.TestCase):
                         vecchi.append(f"{f.name}: {riga.strip()}")
         self.assertEqual(vecchi, [])
 
-    def test_blocco_spegne_e_riaccende_lo_schermo(self):
-        t = (FILE / "etc/xdg/quickshell/vetro/Blocco.qml").read_text()
-        h = Hyprland()
-        trovati = [x for riga in re.findall(r'"(hyprctl dispatch [^"]*)"', t.replace('\\"', "\x00"))
-                   for x in h.comando_shell(riga.replace("\x00", '"'))]
-        self.assertEqual(trovati, ['hl.dsp.dpms({ action = "off" })', 'hl.dsp.dpms({ action = "on" })'])
-        self.assertEqual(h.errori, [])
-
-    def test_pannello_esci(self):
-        t = (FILE / "etc/xdg/quickshell/vetro/Pannello.qml").read_text()
-        self.assertTrue('Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.exit()"])' in t,
-                        "il pulsante Esci di Pannello.qml")
-        h = Hyprland().esegui_comando("hl.dsp.exit()")
-        self.assertEqual(h.errori, [])
-
 
 def motore_js():
     try:
@@ -556,7 +542,7 @@ def motore_js():
         raise AssertionError("manca PySide6 (~/.vetro-qt/bin/pip install PySide6-Essentials)")
     motore_js.app = QCoreApplication.instance() or QCoreApplication([])
     m = QJSEngine()
-    r = m.evaluate((FILE / "etc/xdg/quickshell/vetro/Hypr.js").read_text().replace(".pragma library", ""))
+    r = m.evaluate((FILE / "usr/local/lib/vetro/caelestia/nuovi/utils/HyprImpostazioni.js").read_text().replace(".pragma library", ""))
     if r.isError():
         raise AssertionError(r.toString())
     return m
@@ -570,7 +556,7 @@ def js(m, chiamata):
 
 
 class ProvaHyprJs(unittest.TestCase):
-    """Hypr.js: i comandi che i pannelli mandano a Hyprland e il file delle impostazioni."""
+    """HyprImpostazioni.js: i comandi che i pannelli mandano a Hyprland e il file delle impostazioni."""
 
     def setUp(self):
         self.m = motore_js()

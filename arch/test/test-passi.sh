@@ -52,7 +52,8 @@ test_non_root_non_arch() {
 
 test_file_unico() {
     local t; t=$(mktemp -d)
-    mkdir -p "$t/file/etc"; echo "ciao vetro" > "$t/file/etc/prova.txt"
+    mkdir -p "$t/file/etc" "$t/file/usr/__pycache__"; echo "ciao vetro" > "$t/file/etc/prova.txt"
+    : > "$t/file/usr/__pycache__/scarto.pyc"
     bash "$ARCH_DIR/costruisci.sh" "$t/file" "$t/lfs.sh" >/dev/null
     bash -n "$t/lfs.sh"
     uguale "0" "$?" "il file unico non ha errori di sintassi"
@@ -61,6 +62,7 @@ test_file_unico() {
     bash "$t/lfs.sh" _estrai "$t/estratti" >/dev/null 2>&1
     cmp -s "$t/file/etc/prova.txt" "$t/estratti/etc/prova.txt"
     uguale "0" "$?" "il file estratto dall'archivio e' uguale all'originale"
+    non_esiste "$t/estratti/usr/__pycache__"
     rm -rf "$t"
 }
 

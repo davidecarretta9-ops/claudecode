@@ -45,6 +45,12 @@ f2_desktop() {
     # l'interfaccia di oversicaOS: Caelestia con i ritocchi (45-caelestia.sh)
     compila_caelestia
     installa_font_icone
+    # i pannelli di Vetro di prima: li sostituisce Caelestia (resta la schermata di accesso)
+    local vecchio
+    for vecchio in "$(percorso /etc/xdg/quickshell/vetro)"/*; do
+        [ -e "$vecchio" ] || continue
+        case "${vecchio##*/}" in accesso.qml|AccessoVista.qml|PasswordPillola.qml) ;; *) rm -rf "$vecchio" ;; esac
+    done
     for p in $FILE_DESKTOP; do
         if [ -d "$VETRO_FILE/$p" ]; then installa_cartella "$p"; else installa_file "$p"; fi
     done

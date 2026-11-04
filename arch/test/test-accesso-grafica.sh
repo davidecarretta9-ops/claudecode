@@ -67,59 +67,6 @@ test_anteprime_accesso() {
     anteprime accesso accesso-errore
 }
 
-test_blocco() {
-    contiene "$V/Blocco.qml" "BloccoVista"
-    contiene "$V/Blocco.qml" "PamContext"
-    contiene "$V/Blocco.qml" "vetro-cielo.jpg"
-    contiene "$V/BloccoVista.qml" "font.pixelSize: 160"
-    contiene "$V/BloccoVista.qml" "PasswordPillola"
-    contiene "$V/BloccoVista.qml" '"dddd d MMMM"'
-    sintassi BloccoVista.qml Blocco.qml Opzioni.qml FinestraImpostazioni.qml
-}
-
-test_password_sbagliata_blocco() {
-    contiene "$V/Blocco.qml" "vista.sbagliata()"
-    contiene "$V/BloccoVista.qml" "function sbagliata()"
-}
-
-test_niente_statistiche() {
-    if grep -l "statisticheBlocco" "$V"/*.qml >/dev/null 2>&1; then fallita "statisticheBlocco c'e' ancora"
-    else ok_prova "niente statisticheBlocco"; fi
-}
-
-test_anteprime_blocco() {
-    anteprime blocco
-}
-
-test_impostazioni_chiare() {
-    contiene "$V/FinestraImpostazioni.qml" "VoceLato"
-    contiene "$V/FinestraImpostazioni.qml" "Tema.appFondo"
-    non_contiene "$V/FinestraImpostazioni.qml" "Tema.fondoPieno"
-    # niente colori dei pannelli scuri (testo bianco) sulla finestra chiara
-    if grep -nE 'Tema\.(testo|testo2|testo3|carta|cartaForte|cartaSopra|bordo|bordoForte)([^A-Za-z0-9]|$)' "$V/FinestraImpostazioni.qml" >/dev/null; then
-        fallita "FinestraImpostazioni usa ancora colori dei pannelli scuri"
-    else ok_prova "FinestraImpostazioni usa solo i colori chiari"; fi
-    contiene "$V/VoceLato.qml" "Tema.accento"
-    sintassi VoceLato.qml FinestraImpostazioni.qml Interruttore.qml Cursore.qml
-}
-
-test_su_chiaro() {
-    contiene "$V/Interruttore.qml" "property bool suChiaro: false"
-    contiene "$V/Cursore.qml" "property bool suChiaro: false"
-    contiene "$V/FinestraImpostazioni.qml" "suChiaro: true"
-}
-
-test_anteprime_impostazioni() {
-    anteprime impostazioni-lato
-}
-
-prova test_impostazioni_chiare
-prova test_su_chiaro
-prova test_anteprime_impostazioni
-prova test_blocco
-prova test_password_sbagliata_blocco
-prova test_niente_statistiche
-prova test_anteprime_blocco
 prova test_accesso_usa_vista
 prova test_niente_tema
 prova test_occhio

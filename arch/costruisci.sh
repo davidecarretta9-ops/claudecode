@@ -31,7 +31,8 @@ return 0 2>/dev/null || exit 0
 FINE
     echo '__VETRO_ARCHIVIO__'
     # archivio sempre uguale a parita' di file (ordine, date e proprietari fissi)
-    tar -C "$file" --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -c . \
+    # (senza le copie compilate di Python che le prove lasciano accanto agli script)
+    tar -C "$file" --exclude=__pycache__ --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -c . \
         | gzip -n -9 | base64 -w 76
 } > "$uscita.nuovo"
 chmod 755 "$uscita.nuovo"

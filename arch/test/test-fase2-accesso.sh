@@ -38,19 +38,7 @@ test_accesso_qml() {
     else fallita "accesso.qml: errori di sintassi o manca qmllint"; fi
 }
 
-test_opzioni_schermi() {
-    contiene "$V/Opzioni.qml" 'import "Hypr.js" as Hypr'
-    contiene "$V/Opzioni.qml" "Hypr.impostazioni("
-    contiene "$V/Opzioni.qml" '/.config/hypr/vetro-impostazioni.lua"'
-    non_esiste "$V/Schermi.js"
-    contiene "$V/Opzioni.qml" "/.config/vetro/schermi.json"
-    non_contiene "$V/Opzioni.qml" "schermo.conf"
-    non_contiene "$V/FinestraImpostazioni.qml" "schermo.conf"
-    contiene "$V/FinestraImpostazioni.qml" "Opzioni.sceltaSchermo("
-}
-
 prova test_greetd
 prova test_f2_accesso
 prova test_accesso_qml
-prova test_opzioni_schermi
 riassunto

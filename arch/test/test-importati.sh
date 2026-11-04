@@ -16,7 +16,8 @@ tipo_di() {   # bash | python | altro (dalla prima riga)
 
 test_quanti_qml() {
     local n; n=$(find "$F/etc/xdg/quickshell/vetro" -name '*.qml' | wc -l)
-    if [ "$n" -ge 34 ]; then ok_prova "$n file QML"; else fallita "solo $n file QML (almeno 34)"; fi
+    # i pannelli sono di Caelestia: di Vetro resta la schermata di accesso (3 file)
+    if [ "$n" -ge 3 ]; then ok_prova "$n file QML"; else fallita "solo $n file QML (almeno 3)"; fi
 }
 
 test_sintassi_script() {
