@@ -1,4 +1,4 @@
--- Hyprland, desktop "Vetro" (creato da lfs.sh). Hyprland 0.57 legge solo file Lua.
+-- Hyprland, desktop di oversicaOS (creato da lfs.sh). Hyprland 0.57 legge solo file Lua.
 -- Questo file e' per tutti: le TUE modifiche mettile in ~/.config/hypr/personale.lua
 -- (viene letto per ultimo e vince). Le scelte fatte da Impostazioni finiscono in
 -- ~/.config/hypr/vetro-impostazioni.lua. Tutti e due li crea avvia-desktop.
@@ -121,22 +121,27 @@ hl.window_rule({
     center = true,
 })
 
--- sfocatura dietro i pannelli di Quickshell (solo dove non sono trasparenti)
-hl.layer_rule({ name = "vetro-sfocatura", match = { namespace = "^(vetro-.*)$" },
-                blur = true, ignore_alpha = 0.2 })
-hl.layer_rule({ name = "vetro-sfondo-fermo", match = { namespace = "^(vetro-sfondo)$" }, no_anim = true })
+-- i pannelli di Caelestia (come nella sua configurazione: caelestia-dots, GPL-3)
+hl.layer_rule({ name = "caelestia-fermi", match = { namespace = "caelestia-(border-exclusion|area-picker)" },
+                no_anim = true })
+hl.layer_rule({ name = "caelestia-dissolvenza", match = { namespace = "caelestia-(drawers|background)" },
+                animation = "fade" })
+hl.layer_rule({ name = "selezione", match = { namespace = "selection" }, animation = "fade" })
 
 -- --- tasti ------------------------------------------------------------------------
 local W = "SUPER"     -- il tasto Windows
 
--- tasto Windows da solo: cerca le app (come lo Start o Spotlight)
-hl.bind(W .. " + SUPER_L", hl.dsp.global("quickshell:avvio"), { release = true })
-hl.bind(W .. " + SPACE", hl.dsp.global("quickshell:avvio"))
-hl.bind(W .. " + A", hl.dsp.global("quickshell:pannello"))
-hl.bind(W .. " + D", hl.dsp.global("quickshell:cruscotto"))
-hl.bind(W .. " + I", hl.dsp.global("quickshell:impostazioni"))
-hl.bind(W .. " + L", hl.dsp.global("quickshell:blocca"))
-hl.bind(W .. " + N", hl.dsp.global("quickshell:notifiche"))
+-- tasto Windows da solo: il menu delle app di Caelestia (come lo Start o Spotlight)
+hl.bind(W .. " + SUPER_L", hl.dsp.global("caelestia:launcher"), { release = true })
+hl.bind(W .. " + SPACE", hl.dsp.global("caelestia:launcher"))
+hl.bind(W .. " + A", hl.dsp.global("caelestia:utilities"))        -- comandi rapidi
+hl.bind(W .. " + N", hl.dsp.global("caelestia:sidebar"))          -- notifiche
+hl.bind(W .. " + D", hl.dsp.global("caelestia:dashboard"))        -- pannello in alto
+hl.bind(W .. " + I", hl.dsp.global("caelestia:nexus"))            -- impostazioni
+hl.bind(W .. " + K", hl.dsp.global("caelestia:showall"))
+hl.bind(W .. " + L", hl.dsp.global("caelestia:lock"))
+hl.bind("CTRL + ALT + DELETE", hl.dsp.global("caelestia:session"))  -- spegni, riavvia, esci
+hl.bind("CTRL + ALT + C", hl.dsp.global("caelestia:clearNotifs"), { locked = true })
 
 hl.bind(W .. " + RETURN", hl.dsp.exec_cmd("foot"))
 hl.bind("CTRL + ALT + T", hl.dsp.exec_cmd("foot"))
@@ -145,8 +150,9 @@ hl.bind(W .. " + B", hl.dsp.exec_cmd("/usr/local/bin/browser-predefinito"))
 hl.bind("CTRL + SHIFT + ESCAPE", hl.dsp.exec_cmd("xfce4-taskmanager"))
 -- emergenza: se i pannelli si bloccano li chiude (avvia-pannelli li riapre subito)
 hl.bind("CTRL + ALT + BACKSPACE", hl.dsp.exec_cmd("pkill -KILL -x quickshell"))
-hl.bind("PRINT", hl.dsp.exec_cmd("/usr/local/bin/schermata"))
-hl.bind("SHIFT + PRINT", hl.dsp.exec_cmd("/usr/local/bin/schermata area"))
+hl.bind("PRINT", hl.dsp.exec_cmd("caelestia screenshot"), { locked = true })
+hl.bind("SHIFT + PRINT", hl.dsp.global("caelestia:screenshot"))   -- scegli un'area
+hl.bind(W .. " + SHIFT + S", hl.dsp.global("caelestia:screenshotFreeze"))
 
 -- finestre
 hl.bind("ALT + F4", hl.dsp.window.close())
@@ -154,7 +160,9 @@ hl.bind(W .. " + Q", hl.dsp.window.close())
 hl.bind(W .. " + UP", hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }))
 hl.bind(W .. " + F", hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
 hl.bind(W .. " + V", hl.dsp.window.float({ action = "toggle" }))
-hl.bind(W .. " + DOWN", hl.dsp.global("quickshell:riduci"))
+-- "riduci": la finestra va nella scrivania nascosta "ridotte"; Windows+S la mostra
+hl.bind(W .. " + DOWN", hl.dsp.window.move({ workspace = "special:ridotte", follow = false }))
+hl.bind(W .. " + S", hl.dsp.workspace.toggle_special("ridotte"))
 -- Alt+Tab: la finestra dopo, e portata davanti alle altre
 hl.bind("ALT + TAB", function()
     hl.dispatch(hl.dsp.window.cycle_next())
@@ -183,9 +191,15 @@ hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_
 hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),
         { locked = true, repeating = true })
 hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { locked = true })
-hl.bind("XF86AudioPlay", hl.dsp.global("quickshell:musica-play"), { locked = true })
-hl.bind("XF86AudioNext", hl.dsp.global("quickshell:musica-avanti"), { locked = true })
-hl.bind("XF86AudioPrev", hl.dsp.global("quickshell:musica-indietro"), { locked = true })
+hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true })
+hl.bind("XF86AudioPlay", hl.dsp.global("caelestia:mediaToggle"), { locked = true })
+hl.bind("XF86AudioPause", hl.dsp.global("caelestia:mediaToggle"), { locked = true })
+hl.bind("XF86AudioNext", hl.dsp.global("caelestia:mediaNext"), { locked = true })
+hl.bind("XF86AudioPrev", hl.dsp.global("caelestia:mediaPrev"), { locked = true })
+hl.bind("XF86AudioStop", hl.dsp.global("caelestia:mediaStop"), { locked = true })
+-- luminosita' (portatili)
+hl.bind("XF86MonBrightnessUp", hl.dsp.global("caelestia:brightnessUp"), { locked = true })
+hl.bind("XF86MonBrightnessDown", hl.dsp.global("caelestia:brightnessDown"), { locked = true })
 
 -- --- avvio ------------------------------------------------------------------------
 hl.on("hyprland.start", function()

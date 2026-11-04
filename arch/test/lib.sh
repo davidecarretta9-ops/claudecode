@@ -64,6 +64,8 @@ FINE
 # compilatori finti (Quickshell e Caelestia si compilano dai sorgenti)
 compilazione_finta_base() {
     git_finto; finto cmake; finto ninja
+    # Caelestia: la sua compilazione si prova a parte (test-caelestia.sh)
+    compila_caelestia() { echo "compila_caelestia" >> "$RADICE/.chiamate"; }
 }
 
 ok_prova() { echo "ok      $PROVA_ATTUALE: $*" >> "$ESITI"; }

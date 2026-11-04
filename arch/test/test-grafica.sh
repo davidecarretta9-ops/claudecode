@@ -45,11 +45,13 @@ test_avvia_desktop_css() {
     local bin="$RADICE/bin"; mkdir -p "$bin" "$RADICE/casa/.config/gtk-4.0"
     printf '#!/bin/sh\nexit 0\n' > "$bin/Hyprland"; chmod +x "$bin/Hyprland"
     printf '#!/bin/sh\necho vetro\n' > "$bin/id"; chmod +x "$bin/id"
+    printf '#!/bin/sh\necho oversica-config >> "%s/.chiamate"\n' "$RADICE" > "$bin/oversica-config"; chmod +x "$bin/oversica-config"
     echo "/* il mio */" > "$RADICE/casa/.config/gtk-4.0/gtk.css"
     HOME="$RADICE/casa" VETRO_CSS="$F/etc/xdg/vetro" PATH="$bin:$PATH" bash "$F/usr/local/bin/avvia-desktop" >/dev/null 2>&1
     contiene "$RADICE/casa/.config/gtk-3.0/gtk.css" "#1a8cff"
     contiene "$RADICE/casa/.config/gtk-4.0/gtk.css" "/* il mio */"
     non_contiene "$RADICE/casa/.config/gtk-4.0/gtk.css" "#1a8cff"
+    chiamato "oversica-config"
 }
 
 test_fc_cache_dopo_caratteri() {

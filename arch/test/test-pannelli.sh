@@ -51,6 +51,18 @@ FINE
     non_contiene "$RADICE/casa/.cache/quickshell-vetro.log" "non rispondono"
 }
 
+test_avvia_caelestia() {
+    prepara_pannelli
+    finto_con quickshell <<'FINE'
+sleep 3
+FINE
+    HOME="$RADICE/casa" PATH="$RADICE/.finti:$PATH" QS_RISPONDE=1000 VETRO_OGNI=0.2 \
+        timeout 30 bash "$AVVIA" >/dev/null 2>&1
+    chiamato "quickshell -c caelestia"
+    chiamato "qs -c caelestia ipc call oversica ping"
+    non_chiamato "/etc/xdg/quickshell/vetro"
+}
+
 test_tasto_di_emergenza() {
     # Ctrl+Alt+Backspace chiude i pannelli bloccati (avvia-pannelli li riapre)
     contiene "$F/etc/xdg/hypr/vetro.lua" 'hl.bind("CTRL + ALT + BACKSPACE", hl.dsp.exec_cmd("pkill -KILL -x quickshell"))'
@@ -58,5 +70,6 @@ test_tasto_di_emergenza() {
 
 prova test_pannelli_bloccati
 prova test_pannelli_che_rispondono
+prova test_avvia_caelestia
 prova test_tasto_di_emergenza
 riassunto

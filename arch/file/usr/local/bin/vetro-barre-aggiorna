@@ -99,7 +99,7 @@ if rawget(hl.plugin, "hyprbars") then
     end
     pulsante("✕", "hyprctl dispatch 'hl.dsp.window.close()'")
     pulsante("■", ingrandisci)
-    pulsante("–", [[hyprctl dispatch 'hl.dsp.global("quickshell:riduci")']])
+    pulsante("–", [[hyprctl dispatch 'hl.dsp.window.move({ workspace = "special:ridotte", follow = false })']])
 end
 FINE
 echo "[OK] Barre del titolo pronte (plugin per Hyprland $versione)"

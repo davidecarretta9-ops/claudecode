@@ -1,0 +1,55 @@
+#!/usr/bin/python3 -I
+"""Le scelte di oversicaOS per Caelestia (creato da lfs.sh). Le scrive in
+~/.config/caelestia/shell.json solo dove mancano: quello che hai cambiato tu resta.
+Lo lancia avvia-desktop a ogni accesso."""
+import json
+import os
+import pathlib
+
+SCELTE = {
+    "bar": {"persistent": False},                 # la barra a sinistra compare dal bordo
+    "general": {
+        "language": "it",
+        "logo": "caelestia",                      # il componente Logo: l'Orbita di oversicaOS
+        "apps": {"terminal": ["foot"], "explorer": ["thunar"]},
+    },
+    "paths": {"wallpaperDir": "/usr/share/backgrounds"},
+}
+
+
+def unisci(mio, scelte):
+    """aggiunge a mio le chiavi di scelte che mancano (anche dentro i gruppi)"""
+    for k, v in scelte.items():
+        if isinstance(v, dict):
+            if not isinstance(mio.get(k), dict):
+                if k in mio:
+                    continue                      # c'e' gia' un valore dell'utente: resta
+                mio[k] = {}
+            unisci(mio[k], v)
+        elif k not in mio:
+            mio[k] = v
+    return mio
+
+
+def main():
+    casa = pathlib.Path(os.environ.get("HOME", "/tmp"))
+    cartella = pathlib.Path(os.environ.get("XDG_CONFIG_HOME") or casa / ".config") / "caelestia"
+    cartella.mkdir(parents=True, exist_ok=True)
+    f = cartella / "shell.json"
+    mio = {}
+    if f.exists():
+        try:
+            mio = json.loads(f.read_text())
+            if not isinstance(mio, dict):
+                raise ValueError("non e' un oggetto")
+        except (ValueError, OSError):
+            f.replace(cartella / "shell.json.rovinato")
+            mio = {}
+    nuovo = unisci(mio, SCELTE)
+    temp = cartella / "shell.json.nuovo"
+    temp.write_text(json.dumps(nuovo, indent=4, ensure_ascii=False) + "\n")
+    temp.replace(f)
+
+
+if __name__ == "__main__":
+    main()

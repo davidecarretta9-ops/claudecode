@@ -1,0 +1,12 @@
+diff --git a/shell.qml b/shell.qml
+index 60cb877..09850f8 100644
+--- a/shell.qml
++++ b/shell.qml
+@@ -50,6 +50,7 @@ ShellRoot {
+ 
+     // Daemons
+     Shortcuts {}
++    Oversica {}
+     BatteryMonitor {}
+     GameMode {}
+     IdleInhibit {}

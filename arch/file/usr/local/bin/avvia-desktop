@@ -42,4 +42,6 @@ else
     echo "-- su un PC vero: la risoluzione migliore dello schermo (vetro.lua)" > "$CONF/hypr/vetro-schermo.lua"
 fi
 if [ -f "$HOME/.cache/hyprland.log" ]; then mv -f "$HOME/.cache/hyprland.log" "$HOME/.cache/hyprland-prima.log"; fi
+# le scelte di oversicaOS per Caelestia (solo quelle che mancano)
+oversica-config || true
 exec Hyprland -c /etc/xdg/hypr/vetro.lua > "$HOME/.cache/hyprland.log" 2>&1

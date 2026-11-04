@@ -392,11 +392,20 @@ class ProvaDesktop(unittest.TestCase):
     def test_tasti(self):
         h = self.carica()
         attesi = {
-            "SUPER + SUPER_L": "global quickshell:avvio",
-            "SUPER + SPACE": "global quickshell:avvio",
-            "SUPER + A": "global quickshell:pannello",
-            "SUPER + L": "global quickshell:blocca",
-            "SUPER + DOWN": "global quickshell:riduci",
+            "SUPER + SUPER_L": "global caelestia:launcher",
+            "SUPER + SPACE": "global caelestia:launcher",
+            "SUPER + L": "global caelestia:lock",
+            "CTRL + ALT + DELETE": "global caelestia:session",
+            "SUPER + A": "global caelestia:utilities",
+            "SUPER + N": "global caelestia:sidebar",
+            "SUPER + D": "global caelestia:dashboard",
+            "SUPER + I": "global caelestia:nexus",
+            "SUPER + K": "global caelestia:showall",
+            "PRINT": "exec_cmd caelestia screenshot",
+            "SHIFT + PRINT": "global caelestia:screenshot",
+            "XF86AudioPlay": "global caelestia:mediaToggle",
+            "XF86AudioNext": "global caelestia:mediaNext",
+            "XF86MonBrightnessUp": "global caelestia:brightnessUp",
             "SUPER + RETURN": "exec_cmd foot",
             "SUPER + E": "exec_cmd thunar",
             "SUPER + Q": "window.close",
@@ -404,10 +413,11 @@ class ProvaDesktop(unittest.TestCase):
             "SUPER + V": "window.float action=toggle",
             "SUPER + UP": "window.fullscreen action=toggle mode=maximized",
             "SUPER + F": "window.fullscreen action=toggle mode=fullscreen",
+            "SUPER + DOWN": "window.move follow=False workspace=special:ridotte",
+            "SUPER + S": "workspace.toggle_special ridotte",
             "SUPER + 1": "focus workspace=1",
             "SUPER + SHIFT + 5": "window.move workspace=5",
             "SUPER + CTRL + RIGHT": "focus workspace=e+1",
-            "XF86AudioPlay": "global quickshell:musica-play",
             "CTRL + ALT + BACKSPACE": "exec_cmd pkill -KILL -x quickshell",
         }
         for tasti, atteso in attesi.items():
@@ -417,7 +427,16 @@ class ProvaDesktop(unittest.TestCase):
         self.assertTrue(h.bind("SUPER + SUPER_L")["opzioni"].get("release"))
         self.assertTrue(h.bind("SUPER + mouse:272")["opzioni"].get("mouse"))
         self.assertTrue(h.bind("XF86AudioRaiseVolume")["opzioni"].get("repeating"))
+        for b in h.binds:
+            self.assertNotIn("quickshell:", comando(b), b["tasti"])
         self.assertEqual(h.errori, [])
+
+    def test_regole_dei_pannelli(self):
+        h = self.carica()
+        regole = {r["match"]["namespace"]: r for r in h.layer_rules}
+        self.assertTrue(regole["caelestia-(border-exclusion|area-picker)"].get("no_anim"))
+        self.assertEqual(regole["caelestia-(drawers|background)"].get("animation"), "fade")
+        self.assertFalse(any("vetro-" in n for n in regole))
 
     def test_alt_tab_porta_in_cima(self):
         h = self.carica()
@@ -487,7 +506,7 @@ class ProvaBarre(unittest.TestCase):
         comandi.append(h.comando_shell(h.config["plugin.hyprbars.on_double_click"]))
         self.assertEqual(comandi, [["hl.dsp.window.close()"],
                                    ['hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })'],
-                                   ['hl.dsp.global("quickshell:riduci")'],
+                                   ['hl.dsp.window.move({ workspace = "special:ridotte", follow = false })'],
                                    ['hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })']])
         self.assertEqual(h.errori, [])
 

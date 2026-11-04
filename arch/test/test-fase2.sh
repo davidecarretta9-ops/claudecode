@@ -134,6 +134,8 @@ test_f2_desktop() {
     chiamato "python3 -I $RADICE/usr/local/lib/vetro/disegna-cursori $RADICE/usr/share/icons/Vetro"
     chiamato "vetro-barre-aggiorna"
     chiamato "systemctl --global enable pipewire.socket wireplumber.service pipewire-pulse.socket"
+    chiamato "compila_caelestia"
+    esiste "$RADICE/usr/local/bin/oversica-config"
     esiste "$RADICE/usr/share/fonts/material-symbols/MaterialSymbolsRounded.ttf"
 }
 

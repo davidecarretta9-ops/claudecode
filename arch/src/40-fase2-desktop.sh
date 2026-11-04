@@ -5,6 +5,7 @@ PKG_FASE2=(hyprland quickshell greetd xdg-desktop-portal-hyprland pipewire wirep
 FILE_DESKTOP="etc/xdg/quickshell/vetro etc/xdg/hypr usr/local/lib/vetro etc/gtk-3.0 etc/gtk-4.0
               usr/local/bin/avvia-desktop usr/local/bin/avvio-vetro usr/local/bin/avvia-pannelli
               usr/local/bin/blocca-schermo usr/local/bin/sfondo-desktop usr/local/bin/schermata
+              usr/local/bin/oversica-config
               usr/local/bin/vetro-barre-aggiorna etc/pam.d/vetro-blocco
               etc/pacman.d/hooks/vetro-barre.hook usr/share/icons/default/index.theme
               usr/share/fonts/dm-sans usr/share/icons/hicolor/scalable/apps/vetro.svg etc/xdg/vetro
@@ -41,6 +42,8 @@ f2_desktop() {
     for p in "${PKG_FASE2[@]}"; do [ "$p" = quickshell ] || senza+=("$p"); done
     installa_pacchetti "${senza[@]}"
     installa_quickshell
+    # l'interfaccia di oversicaOS: Caelestia con i ritocchi (45-caelestia.sh)
+    compila_caelestia
     installa_font_icone
     for p in $FILE_DESKTOP; do
         if [ -d "$VETRO_FILE/$p" ]; then installa_cartella "$p"; else installa_file "$p"; fi
@@ -58,7 +61,7 @@ f2_desktop() {
     [ -f "$p" ] || echo "-- Barre del titolo: vuoto finche' il plugin hyprbars non c'e'" > "$p"
     esegui "$(percorso /usr/local/bin/vetro-barre-aggiorna)"
     esegui systemctl --global enable pipewire.socket wireplumber.service pipewire-pulse.socket
-    ok "Desktop Vetro con l'aspetto di GNOME"
+    ok "Desktop di oversicaOS (Caelestia)"
 }
 
 # --- la schermata di accesso: greetd apre accesso.qml in un Hyprland tutto suo ----------
