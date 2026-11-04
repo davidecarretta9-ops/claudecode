@@ -51,7 +51,7 @@ exit 0
 FINE
     : > "$RADICE/.chiamate"
     HOME="$RADICE/casa" PATH="$BIN:$PATH" bash "$F/usr/local/bin/avvia-desktop" >/dev/null 2>&1
-    chiamato "Hyprland -c /etc/xdg/hypr/vetro.conf"
+    chiamato "Hyprland -c /etc/xdg/hypr/vetro.lua"
     local a h
     a=$(grep -n "fantasma-aiuto accendi" "$RADICE/.chiamate" | cut -d: -f1)
     h=$(grep -n "^Hyprland" "$RADICE/.chiamate" | cut -d: -f1)

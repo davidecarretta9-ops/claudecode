@@ -36,7 +36,7 @@ ShellRoot {
         FinestraImpostazioni {}
     }
 
-    // --- i tasti (li manda Hyprland: vedi "global" in hyprland.conf) -------------------
+    // --- i tasti (li manda Hyprland: vedi hl.dsp.global in /etc/xdg/hypr/vetro.lua) -------------------
     GlobalShortcut { name: "avvio"; description: "Cerca le app"; onPressed: Stato.alterna("avvio") }
     GlobalShortcut { name: "pannello"; description: "Centro di controllo"; onPressed: Stato.alterna("pannello") }
     GlobalShortcut { name: "cruscotto"; description: "Cruscotto"; onPressed: Stato.alterna("cruscotto") }

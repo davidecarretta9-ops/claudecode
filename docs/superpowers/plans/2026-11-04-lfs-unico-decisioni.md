@@ -30,3 +30,30 @@ Ogni riga: cosa si e' deciso, perche', e cosa costa se e' sbagliato.
 - Task 2: complete (commits 282746f..af096a6, tests: bash arch/test/esegui.sh → === TUTTO OK)
 - Task 3: complete (commits af096a6..0be4f47, tests: bash arch/test/esegui.sh → === TUTTO OK)
 - Task 4: complete (commits 0be4f47..ca4df1c, tests: bash arch/test/esegui.sh → === TUTTO OK)
+
+## Hyprland 0.57 (solo Lua)
+
+Sul PC dell'utente Arch ha installato Hyprland 0.57.1, che legge solo file Lua: la
+schermata di accesso partiva in "emergency mode". Decisioni:
+
+- Ruling: tutte le configurazioni passano a Lua (`accesso-hyprland.lua`, `vetro.lua`,
+  `vetro-impostazioni.lua`, `vetro-barre.lua`, nella casa `vetro-schermo.lua` e
+  `personale.lua`) — Hyprland 0.57 non ha piu' il vecchio formato — se Arch tornasse
+  indietro di versione servirebbero di nuovo i `.conf`.
+- Ruling: i file dell'utente si leggono con `pcall(dofile, ...)` e un avviso se hanno
+  errori — un errore in `personale.lua` non toglie i tasti — costo: niente ricarica
+  automatica quando cambiano (Impostazioni chiama gia' `hyprctl reload`).
+- Ruling: la schermata di accesso ha un tasto che non fa niente (`SUPER + F12` → no_op)
+  — con un errore e zero tasti Hyprland attiva i tasti d'emergenza (Windows+Q apre un
+  terminale) — costo: nessuno.
+- Ruling: i comandi dei pannelli (riduci, riporta, esci, schermo spento) si scrivono in
+  Lua (`Hypr.js`, che sostituisce `Schermi.js`); un indirizzo di finestra strano non
+  manda niente.
+- Ruling: hyprbars per una versione di Hyprland che `hyprpm.toml` non elenca ancora usa
+  l'ultima versione del plugin, come fa hyprpm — se non si compila le barre mancano e il
+  desktop funziona lo stesso.
+- Prove: `test_lua.py` esegue i file con Lua 5.5 vero (lupa) dentro un Hyprland finto
+  che conosce i nomi presi dai sorgenti di Hyprland 0.57.1 (`api_hyprland.json`, da
+  `estrai_api_hyprland.py`): un nome sbagliato fa fallire la prova.
+- In piu': mancava `/usr/local/bin/schermata` (tasto Stamp e centro di controllo); ora
+  c'e' (grim, slurp per l'area).

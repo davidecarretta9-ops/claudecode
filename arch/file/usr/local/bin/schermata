@@ -1,0 +1,15 @@
+#!/bin/bash
+# Schermata (creato da lfs.sh): la usano il tasto Stamp e il centro di controllo.
+#   schermata        tutto lo schermo
+#   schermata area   un rettangolo scelto col mouse (Esc per annullare)
+# Il file va in ~/Immagini/Schermate e compare un avviso.
+cartella="$HOME/Immagini/Schermate"
+mkdir -p "$cartella"
+file="$cartella/Schermata $(date '+%Y-%m-%d %H.%M.%S').png"
+if [ "${1:-}" = area ]; then
+    zona=$(slurp) || exit 0          # annullata: niente schermata
+    grim -g "$zona" "$file" || exit 1
+else
+    grim "$file" || exit 1
+fi
+notify-send -i "$file" "Schermata salvata" "In Immagini/Schermate" 2>/dev/null || true

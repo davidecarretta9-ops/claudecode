@@ -5,6 +5,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import "Hypr.js" as Hypr
 
 Singleton {
     id: finestre
@@ -20,9 +21,12 @@ Singleton {
     function ridotta(t) {
         return !!(t && t.workspace && t.workspace.name === nascoste);
     }
+    // un comando per Hyprland (in Lua, da Hypr.js); vuoto = indirizzo strano, niente
+    function invia(comando) {
+        if (comando) Hyprland.dispatch(comando);
+    }
     function riduci(indirizzo) {
-        if (!indirizzo) return;
-        Hyprland.dispatch("movetoworkspacesilent " + nascoste + ",address:" + indirizzo);
+        invia(Hypr.riduci(indirizzo));
     }
     function riduciAttiva() {
         const t = Hyprland.activeToplevel;
@@ -30,13 +34,13 @@ Singleton {
     }
     function riporta(t) {
         if (!t || !t.address) return;
-        const ind = "0x" + t.address.replace(/^0x/, "");
+        const ind = t.address;
         if (ridotta(t)) {
             const ws = Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : 1;
-            Hyprland.dispatch("movetoworkspace " + ws + ",address:" + ind);
+            invia(Hypr.sposta(ind, ws));
         }
-        Hyprland.dispatch("focuswindow address:" + ind);
-        Hyprland.dispatch("alterzorder top,address:" + ind);
+        invia(Hypr.fuoco(ind));
+        invia(Hypr.inCima(ind));
     }
     function finestreDi(app) {
         const r = [];

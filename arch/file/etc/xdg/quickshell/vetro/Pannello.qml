@@ -422,7 +422,7 @@ PanelWindow {
                 Layout.fillWidth: true
                 spacing: 8
                 Spegnimento { icona: "lock"; testo: "Blocca"; conferma: false; onFatto: Stato.blocca() }
-                Spegnimento { icona: "logout"; testo: "Esci"; onFatto: Quickshell.execDetached(["hyprctl", "dispatch", "exit"]) }
+                Spegnimento { icona: "logout"; testo: "Esci"; onFatto: Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.exit()"]) }
                 Spegnimento { icona: "restart_alt"; testo: "Riavvia"; onFatto: Quickshell.execDetached(["sudo", "-n", "/usr/bin/systemctl", "reboot"]) }
                 Spegnimento { icona: "power_settings_new"; testo: "Spegni"; onFatto: Quickshell.execDetached(["sudo", "-n", "/usr/bin/systemctl", "poweroff"]) }
             }

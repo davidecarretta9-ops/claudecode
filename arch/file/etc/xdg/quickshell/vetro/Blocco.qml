@@ -61,8 +61,8 @@ Scope {
         running: secondi > 0
         command: ["swayidle", "-w",
                   "timeout", String(secondi), "qs -p /etc/xdg/quickshell/vetro ipc call blocco blocca",
-                  "timeout", String(secondi + 60), "hyprctl dispatch dpms off",
-                  "resume", "hyprctl dispatch dpms on"]
+                  "timeout", String(secondi + 60), "hyprctl dispatch 'hl.dsp.dpms({ action = \"off\" })'",
+                  "resume", "hyprctl dispatch 'hl.dsp.dpms({ action = \"on\" })'"]
         onSecondiChanged: { running = false; riavviaInattivita.restart(); }
     }
     Timer {

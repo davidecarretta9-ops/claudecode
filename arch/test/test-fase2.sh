@@ -16,20 +16,24 @@ FINE
 }
 
 test_conf_hyprland() {
-    non_contiene "$F/etc/xdg/hypr/vetro.conf" "vetro-accesso"
-    contiene "$F/etc/xdg/hypr/vetro.conf" "env = XCURSOR_THEME, Vetro"
-    contiene "$F/etc/xdg/hypr/vetro.conf" "source = ~/.config/hypr/vetro-schermo.conf"
+    # Hyprland 0.57 legge solo Lua: i vecchi .conf non ci sono piu'
+    # (il controllo completo dei file Lua e' in python/test_lua.py)
+    non_esiste "$F/etc/xdg/hypr/vetro.conf"
+    non_esiste "$F/etc/xdg/hypr/vetro-impostazioni.conf"
+    non_contiene "$F/etc/xdg/hypr/vetro.lua" "vetro-accesso"
+    contiene "$F/etc/xdg/hypr/vetro.lua" 'hl.env("XCURSOR_THEME", "Vetro")'
+    contiene "$F/etc/xdg/hypr/vetro.lua" '"/vetro-schermo.lua"'
     # finestre chiare come nel video: angoli 18, niente bordo colorato
-    contiene "$F/etc/xdg/hypr/vetro.conf" "rounding = 18"
-    contiene "$F/etc/xdg/hypr/vetro.conf" "border_size = 0"
+    contiene "$F/etc/xdg/hypr/vetro.lua" "rounding = 18"
+    contiene "$F/etc/xdg/hypr/vetro.lua" "border_size = 0"
     # le impostazioni di partenza (copiate nella casa al primo accesso) dicono lo stesso
-    contiene "$F/etc/xdg/hypr/vetro-impostazioni.conf" "rounding = 18"
+    contiene "$F/etc/xdg/hypr/vetro-impostazioni.lua" "rounding = 18"
     # barre del titolo chiare, titolo DM Sans, tasti senza cerchio con simboli scuri
-    contiene "$BARRE" "bar_color = rgba(f6f8fbff)"
-    contiene "$BARRE" "col.text = rgba(15181dff)"
-    contiene "$BARRE" "bar_text_font = DM Sans"
-    contiene "$BARRE" "hyprbars-button = rgba(00000000), 22, ■,"
-    contiene "$BARRE" "inactive_button_color = rgba(00000000)"
+    contiene "$BARRE" 'bar_color = "rgba(f6f8fbff)"'
+    contiene "$BARRE" 'col = { text = "rgba(15181dff)" }'
+    contiene "$BARRE" 'bar_text_font = "DM Sans"'
+    contiene "$BARRE" 'pulsante("■", ingrandisci)'
+    contiene "$BARRE" 'inactive_button_color = "rgba(00000000)"'
 }
 
 test_barre_versione() {
@@ -41,9 +45,23 @@ test_barre_versione() {
     finto_con pacman <<'FINE'
 echo "hyprland 0.99.0-1"
 FINE
+    # curl finto che non scarica niente (e ricorda cosa gli si chiede)
+    finto_con curl <<'FINE'
+exit 22
+FINE
     PATH="$RADICE/.finti:$PATH" VETRO_HYPRPM_TOML="$RADICE/hyprpm.toml" bash "$BARRE" >/dev/null 2>&1
-    uguale "0" "$?" "senza versione del plugin non e' un errore"
-    uguale "0" "$(grep -vc '^#' "$RADICE/etc/xdg/hypr/vetro-barre.conf")" "vetro-barre.conf con solo commenti"
+    uguale "0" "$?" "senza plugin non e' un errore"
+    uguale "0" "$(grep -vc '^--' "$RADICE/etc/xdg/hypr/vetro-barre.lua")" "vetro-barre.lua con solo commenti Lua"
+    # una versione nuova, che gli autori non hanno ancora segnato: come hyprpm prende
+    # l'ultima versione del plugin
+    chiamato "hyprland-plugins/archive/refs/heads/main.tar.gz"
+    finto_con pacman <<'FINE'
+echo "hyprland 0.54.3-2"
+FINE
+    : > "$RADICE/.chiamate"
+    PATH="$RADICE/.finti:$PATH" VETRO_HYPRPM_TOML="$RADICE/hyprpm.toml" bash "$BARRE" >/dev/null 2>&1
+    chiamato "hyprland-plugins/archive/6acc0738f298f5efe40a99db2c12449112d65633.tar.gz"
+    non_chiamato "refs/heads/main"
 }
 
 test_blocco_pam() {
@@ -67,7 +85,7 @@ test_aspetto_gnome() {
 
 test_niente_lfs() {
     non_contiene "$F/usr/local/bin/avvia-desktop" "labwc"
-    contiene "$F/usr/local/bin/avvia-desktop" "exec Hyprland -c /etc/xdg/hypr/vetro.conf"
+    contiene "$F/usr/local/bin/avvia-desktop" "exec Hyprland -c /etc/xdg/hypr/vetro.lua"
     non_contiene "$F/usr/local/bin/avvia-pannelli" "xfce4-panel"
     non_contiene "$F/usr/local/bin/avvio-vetro" "submap"
     non_contiene "$F/etc/xdg/quickshell/vetro/FinestraImpostazioni.qml" "scegli-desktop"
@@ -109,8 +127,8 @@ test_f2_desktop() {
     FONT_ICONE_SHA256=$(printf carattere | sha256sum | cut -d' ' -f1)
     f2_desktop >/dev/null
     esiste "$RADICE/etc/xdg/quickshell/vetro/shell.qml"
-    esiste "$RADICE/etc/xdg/hypr/vetro.conf"
-    esiste "$RADICE/etc/xdg/hypr/vetro-barre.conf"
+    esiste "$RADICE/etc/xdg/hypr/vetro.lua"
+    esiste "$RADICE/etc/xdg/hypr/vetro-barre.lua"
     esiste "$RADICE/etc/pacman.d/hooks/vetro-barre.hook"
     esiste "$RADICE/usr/local/bin/avvia-desktop"
     chiamato "python3 -I $RADICE/usr/local/lib/vetro/disegna-cursori $RADICE/usr/share/icons/Vetro"

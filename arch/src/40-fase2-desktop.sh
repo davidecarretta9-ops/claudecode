@@ -4,7 +4,7 @@ PKG_FASE2=(hyprland quickshell greetd xdg-desktop-portal-hyprland pipewire wirep
            swayidle swaylock libnotify jq git cmake ninja meson cpio base-devel)
 FILE_DESKTOP="etc/xdg/quickshell/vetro etc/xdg/hypr usr/local/lib/vetro etc/gtk-3.0 etc/gtk-4.0
               usr/local/bin/avvia-desktop usr/local/bin/avvio-vetro usr/local/bin/avvia-pannelli
-              usr/local/bin/blocca-schermo usr/local/bin/sfondo-desktop
+              usr/local/bin/blocca-schermo usr/local/bin/sfondo-desktop usr/local/bin/schermata
               usr/local/bin/vetro-barre-aggiorna etc/pam.d/vetro-blocco
               etc/pacman.d/hooks/vetro-barre.hook usr/share/icons/default/index.theme
               usr/share/fonts/dm-sans usr/share/icons/hicolor/scalable/apps/vetro.svg etc/xdg/vetro
@@ -50,20 +50,24 @@ f2_desktop() {
     # puntatori (freccia bianca col bordo nero spesso), disegnati con Python; gli sfondi
     # sono gia' pronti in usr/share/backgrounds
     esegui python3 -I "$(percorso /usr/local/lib/vetro/disegna-cursori)" "$(percorso /usr/share/icons/Vetro)"
-    # barre del titolo: file vuoto finche' il plugin non c'e', poi il plugin
-    p=$(percorso /etc/xdg/hypr/vetro-barre.conf)
-    [ -f "$p" ] || echo "# Barre del titolo: vuoto finche' il plugin hyprbars non c'e'" > "$p"
+    # barre del titolo: file vuoto finche' il plugin non c'e', poi il plugin. I vecchi
+    # file .conf (Hyprland fino a 0.56) non servono piu'
+    rm -f "$(percorso /etc/xdg/hypr/vetro.conf)" "$(percorso /etc/xdg/hypr/vetro-impostazioni.conf)" \
+          "$(percorso /etc/xdg/hypr/vetro-barre.conf)"
+    p=$(percorso /etc/xdg/hypr/vetro-barre.lua)
+    [ -f "$p" ] || echo "-- Barre del titolo: vuoto finche' il plugin hyprbars non c'e'" > "$p"
     esegui "$(percorso /usr/local/bin/vetro-barre-aggiorna)"
     esegui systemctl --global enable pipewire.socket wireplumber.service pipewire-pulse.socket
     ok "Desktop Vetro con l'aspetto di GNOME"
 }
 
 # --- la schermata di accesso: greetd apre accesso.qml in un Hyprland tutto suo ----------
-FASE2+=("accesso|f2_accesso|etc/greetd/config.toml etc/vetro/accesso-hyprland.conf")
+FASE2+=("accesso|f2_accesso|etc/greetd/config.toml etc/vetro/accesso-hyprland.lua")
 
 f2_accesso() {
     installa_pacchetti greetd
-    installa_file etc/greetd/config.toml etc/vetro/accesso-hyprland.conf
+    installa_file etc/greetd/config.toml etc/vetro/accesso-hyprland.lua
+    rm -f "$(percorso /etc/vetro/accesso-hyprland.conf)"
     # l'utente "greeter" (lo crea il pacchetto greetd) deve poter usare la scheda video
     esegui usermod -aG video greeter
     esegui systemctl enable greetd.service

@@ -8,20 +8,21 @@ QMLLINT=${QMLLINT:-$(command -v pyside6-qmllint || echo "$HOME/.vetro-qt/bin/pys
 
 test_greetd() {
     contiene "$F/etc/greetd/config.toml" 'vt = 1'
-    contiene "$F/etc/greetd/config.toml" 'command = "Hyprland -c /etc/vetro/accesso-hyprland.conf"'
+    contiene "$F/etc/greetd/config.toml" 'command = "Hyprland -c /etc/vetro/accesso-hyprland.lua"'
     contiene "$F/etc/greetd/config.toml" 'user = "greeter"'
-    contiene "$F/etc/vetro/accesso-hyprland.conf" 'exec-once = qs -p /etc/xdg/quickshell/vetro/accesso.qml; hyprctl dispatch exit'
-    contiene "$F/etc/vetro/accesso-hyprland.conf" 'env = XCURSOR_THEME, Vetro'
-    non_contiene "$F/etc/vetro/accesso-hyprland.conf" 'bind'
+    # Hyprland 0.57 legge solo Lua (il controllo completo e' in python/test_lua.py)
+    non_esiste "$F/etc/vetro/accesso-hyprland.conf"
+    contiene "$F/etc/vetro/accesso-hyprland.lua" "hyprctl dispatch 'hl.dsp.exit()'"
+    contiene "$F/etc/vetro/accesso-hyprland.lua" 'hl.env("XCURSOR_THEME", "Vetro")'
     # la password si scrive con la tastiera italiana, come nel desktop
-    contiene "$F/etc/vetro/accesso-hyprland.conf" 'kb_layout = it'
+    contiene "$F/etc/vetro/accesso-hyprland.lua" 'kb_layout = "it"'
 }
 
 test_f2_accesso() {
     radice_finta; finto pacman; finto systemctl; finto usermod
     f2_accesso >/dev/null
     esiste "$RADICE/etc/greetd/config.toml"
-    esiste "$RADICE/etc/vetro/accesso-hyprland.conf"
+    esiste "$RADICE/etc/vetro/accesso-hyprland.lua"
     chiamato "usermod -aG video greeter"
     chiamato "systemctl enable greetd.service"
     chiamato "systemctl disable getty@tty1.service"
@@ -38,8 +39,10 @@ test_accesso_qml() {
 }
 
 test_opzioni_schermi() {
-    contiene "$V/Opzioni.qml" 'import "Schermi.js" as Schermi'
-    contiene "$V/Opzioni.qml" "Schermi.regole("
+    contiene "$V/Opzioni.qml" 'import "Hypr.js" as Hypr'
+    contiene "$V/Opzioni.qml" "Hypr.impostazioni("
+    contiene "$V/Opzioni.qml" '/.config/hypr/vetro-impostazioni.lua"'
+    non_esiste "$V/Schermi.js"
     contiene "$V/Opzioni.qml" "/.config/vetro/schermi.json"
     non_contiene "$V/Opzioni.qml" "schermo.conf"
     non_contiene "$V/FinestraImpostazioni.qml" "schermo.conf"

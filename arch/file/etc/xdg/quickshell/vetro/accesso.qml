@@ -1,6 +1,6 @@
 //@ pragma AppId org.quickshell.vetro.accesso
 // La schermata di accesso (creato da vetro-arch.sh). La apre greetd all'accensione,
-// dentro un Hyprland tutto suo (/etc/vetro/accesso-hyprland.conf), come utente
+// dentro un Hyprland tutto suo (/etc/vetro/accesso-hyprland.lua), come utente
 // "greeter". Scegli l'utente, scrivi la password e premi Invio: greetd la controlla
 // (PAM) e solo allora parte il desktop (/usr/local/bin/avvia-desktop).
 // La grafica e' in AccessoVista.qml (con colori scritti dentro: niente Tema/Opzioni,

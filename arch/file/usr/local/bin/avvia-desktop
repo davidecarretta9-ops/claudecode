@@ -1,5 +1,5 @@
 #!/bin/bash
-# Avvia il desktop Vetro (creato da vetro-arch.sh): Hyprland con i pannelli Quickshell.
+# Avvia il desktop Vetro (creato da lfs.sh): Hyprland con i pannelli Quickshell.
 # Lo lancia la schermata di accesso (greetd) dopo la password giusta.
 # Il registro di Hyprland e' in ~/.cache/hyprland.log (quello della volta prima in
 # ~/.cache/hyprland-prima.log).
@@ -15,8 +15,14 @@ if [ "$(id -un)" = fantasma ]; then
 fi
 CONF="${XDG_CONFIG_HOME:-$HOME/.config}"
 mkdir -p "$CONF/hypr" "$CONF/vetro" "$HOME/.cache"
-[ -f "$CONF/hypr/personale.conf" ] || printf '# Le tue modifiche a Hyprland (le legge per ultime)\n' > "$CONF/hypr/personale.conf"
-[ -f "$CONF/hypr/vetro-impostazioni.conf" ] || cp /etc/xdg/hypr/vetro-impostazioni.conf "$CONF/hypr/vetro-impostazioni.conf"
+# i file di Hyprland dell'utente (Hyprland 0.57 legge solo Lua)
+[ -f "$CONF/hypr/personale.lua" ] || cat > "$CONF/hypr/personale.lua" << 'FINE'
+-- Le tue modifiche a Hyprland (le legge per ultime e vincono). Esempi:
+--   hl.config({ decoration = { rounding = 8 } })
+--   hl.bind("SUPER + T", hl.dsp.exec_cmd("foot"))
+-- Dopo una modifica:  hyprctl reload
+FINE
+[ -f "$CONF/hypr/vetro-impostazioni.lua" ] || cp /etc/xdg/hypr/vetro-impostazioni.lua "$CONF/hypr/vetro-impostazioni.lua"
 # app GTK chiare con l'accento blu: il CSS di Vetro si copia se manca o se e' ancora
 # quello di Vetro (stessa prima riga); un gtk.css tuo non si tocca
 CSS="${VETRO_CSS:-/etc/xdg/vetro}"
@@ -29,11 +35,11 @@ for v in 3.0 4.0; do
 done
 # risoluzione di partenza: nelle macchine virtuali 1920x1080 (all'accensione QEMU
 # propone spesso 800x600). Quella scelta in Impostazioni -> Schermo vale su tutte
-# (e' scritta dopo, in vetro-impostazioni.conf)
+# (e' scritta dopo, in vetro-impostazioni.lua)
 if systemd-detect-virt -q 2>/dev/null; then
-    echo "monitor = , 1920x1080, auto, 1" > "$CONF/hypr/vetro-schermo.conf"
+    echo 'hl.monitor({ output = "", mode = "1920x1080", position = "auto", scale = "1" })' > "$CONF/hypr/vetro-schermo.lua"
 else
-    echo "# su un PC vero: la risoluzione migliore dello schermo (vetro.conf)" > "$CONF/hypr/vetro-schermo.conf"
+    echo "-- su un PC vero: la risoluzione migliore dello schermo (vetro.lua)" > "$CONF/hypr/vetro-schermo.lua"
 fi
 if [ -f "$HOME/.cache/hyprland.log" ]; then mv -f "$HOME/.cache/hyprland.log" "$HOME/.cache/hyprland-prima.log"; fi
-exec Hyprland -c /etc/xdg/hypr/vetro.conf > "$HOME/.cache/hyprland.log" 2>&1
+exec Hyprland -c /etc/xdg/hypr/vetro.lua > "$HOME/.cache/hyprland.log" 2>&1

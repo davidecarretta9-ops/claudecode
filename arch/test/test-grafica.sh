@@ -107,7 +107,36 @@ test_f2_senza_disegna_vetro() {
     non_esiste "$RADICE/usr/local/lib/vetro/disegna-vetro"
 }
 
+# la schermata (tasto Stamp e pulsanti del centro di controllo): grim, e slurp per l'area
+test_schermata() {
+    radice_finta
+    local s="$F/usr/local/bin/schermata"
+    finto_con grim <<'FINE'
+for ultimo in "$@"; do :; done
+printf png > "$ultimo"
+FINE
+    finto_con slurp <<'FINE'
+echo "10,10 200x100"
+FINE
+    finto notify-send
+    HOME="$RADICE/casa" PATH="$RADICE/.finti:$PATH" bash "$s" >/dev/null 2>&1
+    uguale 0 "$?" "schermata di tutto lo schermo"
+    uguale 1 "$(ls "$RADICE/casa/Immagini/Schermate" 2>/dev/null | grep -c '^Schermata .*\.png$')" "un file in Immagini/Schermate"
+    non_chiamato "slurp"
+    chiamato "notify-send"
+    HOME="$RADICE/casa" PATH="$RADICE/.finti:$PATH" bash "$s" area >/dev/null 2>&1
+    chiamato "slurp"
+    chiamato "grim -g 10,10 200x100 "
+    # area annullata (Esc in slurp): niente file in piu', nessun errore
+    finto slurp 1
+    local prima; prima=$(ls "$RADICE/casa/Immagini/Schermate" | wc -l)
+    HOME="$RADICE/casa" PATH="$RADICE/.finti:$PATH" bash "$s" area >/dev/null 2>&1
+    uguale 0 "$?" "area annullata non e' un errore"
+    uguale "$prima" "$(ls "$RADICE/casa/Immagini/Schermate" | wc -l)" "area annullata: nessun file"
+}
+
 prova test_sfondi
+prova test_schermata
 prova test_sfondo_di_partenza
 prova test_f2_senza_disegna_vetro
 prova test_fc_cache_dopo_caratteri

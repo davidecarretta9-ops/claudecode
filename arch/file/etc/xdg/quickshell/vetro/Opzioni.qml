@@ -1,19 +1,19 @@
 pragma Singleton
 // Le scelte fatte da Impostazioni (creato da vetro-arch.sh). Sono salvate in
 // ~/.config/vetro/impostazioni.json; quelle che riguardano le finestre anche in
-// ~/.config/hypr/vetro-impostazioni.conf (lo legge Hyprland).
+// ~/.config/hypr/vetro-impostazioni.lua (lo legge Hyprland, scritto da Hypr.js).
 import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
-import "Schermi.js" as Schermi
+import "Hypr.js" as Hypr
 
 Singleton {
     id: opzioni
 
     readonly property string casa: Quickshell.env("HOME") || "/tmp"
     readonly property string cartella: casa + "/.config/vetro"
-    readonly property string fileHyprland: casa + "/.config/hypr/vetro-impostazioni.conf"
+    readonly property string fileHyprland: casa + "/.config/hypr/vetro-impostazioni.lua"
 
     property alias tema: dati.tema
     property alias opacita: dati.opacita
@@ -72,7 +72,7 @@ Singleton {
     }
 
     // --- gli schermi: le scelte di Impostazioni -> Schermo, per ogni schermo
-    // (~/.config/vetro/schermi.json); le regole di Hyprland le fa Schermi.js
+    // (~/.config/vetro/schermi.json); le regole di Hyprland le fa Hypr.js
     property var scelteSchermi: ({})
     property var schermi: []              // da "hyprctl monitors all -j"
     property bool schermoLetto: false
@@ -128,16 +128,8 @@ Singleton {
 
     // --- finestre: la parte che legge Hyprland -----------------------------------
     function testoHyprland() {
-        let t = "# Creato da Impostazioni (desktop Vetro): non modificarlo a mano,\n";
-        t += "# le tue aggiunte vanno in ~/.config/hypr/personale.conf\n";
-        t += Schermi.regole(schermi, scelteSchermi);
-        t += "animations {\n    enabled = " + (animazioni ? "true" : "false") + "\n}\n";
-        t += "decoration {\n    rounding = " + angoli + "\n";
-        t += "    blur {\n        enabled = " + (sfocatura ? "true" : "false") + "\n    }\n}\n";
-        t += "general {\n    gaps_in = " + Math.round(spazi / 2) + "\n    gaps_out = " + spazi + "\n}\n";
-        if (!affianca)
-            t += "windowrule {\n    name = vetro-finestre-libere\n    match:class = .*\n    float = yes\n}\n";
-        return t;
+        return Hypr.impostazioni({ animazioni: animazioni, angoli: angoli, sfocatura: sfocatura,
+                                   spazi: spazi, affianca: affianca }, schermi, scelteSchermi);
     }
 
     property string ultimoHyprland: ""

@@ -1,0 +1,35 @@
+-- lfs.sh: Hyprland solo per la schermata di accesso (lo apre greetd come utente
+-- "greeter"). Hyprland 0.57 legge solo file Lua. Niente tasti utili: si scrive solo
+-- la password. Quando la schermata ha finito (password giusta) si chiude anche questo
+-- Hyprland e parte il desktop.
+
+hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "1" })
+-- nelle macchine virtuali (QEMU) all'accensione lo schermo partirebbe piccolo
+hl.monitor({ output = "Virtual-1", mode = "1920x1080", position = "auto", scale = "1" })
+
+hl.env("XCURSOR_SIZE", "24")
+hl.env("XCURSOR_THEME", "Vetro")
+hl.env("QT_QPA_PLATFORM", "wayland")
+
+hl.config({
+    -- la tastiera italiana, come nel desktop (se no la password non si scrive uguale)
+    input = { kb_layout = "it" },
+    misc = {
+        disable_hyprland_logo = true,
+        disable_splash_rendering = true,
+        force_default_wallpaper = 0,
+        disable_hyprland_guiutils_check = true,
+        -- niente avviso "avviato senza start-hyprland": lo avvia greetd
+        disable_watchdog_warning = true,
+    },
+    -- nelle macchine virtuali il puntatore "hardware" a volte non si vede
+    cursor = { no_hardware_cursors = 1 },
+})
+
+-- un tasto che non fa niente: se un giorno questo file avesse un errore, Hyprland
+-- senza nessun tasto attiverebbe i suoi tasti d'emergenza (Windows+Q apre un terminale)
+hl.bind("SUPER + F12", hl.dsp.no_op())
+
+hl.on("hyprland.start", function()
+    hl.exec_cmd("qs -p /etc/xdg/quickshell/vetro/accesso.qml; hyprctl dispatch 'hl.dsp.exit()'")
+end)

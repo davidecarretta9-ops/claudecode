@@ -1,6 +1,6 @@
 #!/bin/bash
 # Programmi che partono insieme al desktop Vetro (creato da lfs.sh, Fase 10).
-# Lo lancia Hyprland (exec-once in /etc/xdg/hypr/vetro.conf).
+# Lo lancia Hyprland all'avvio (hyprland.start in /etc/xdg/hypr/vetro.lua).
 export PATH="/usr/local/bin:$PATH"
 [ -x /usr/local/bin/avvia-audio ] && /usr/local/bin/avvia-audio >/dev/null 2>&1 &
 [ -x /usr/local/bin/guardiano-avvisi ] && /usr/local/bin/guardiano-avvisi >/dev/null 2>&1 &
