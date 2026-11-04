@@ -69,25 +69,8 @@ FINE
     non_chiamato "pacman -Si quickshell"
 }
 
-test_quickshell_ripiego() {
-    radice_finta
-    finto_con pacman <<'FINE'
-[ "$1 $2" = "-Si quickshell" ] && exit 1
-exit 0
-FINE
-    finto_con curl <<'FINE'
-while [ $# -gt 0 ]; do [ "$1" = -o ] && { echo "file sbagliato" > "$2"; shift; }; shift; done
-FINE
-    local msg; msg=$( (installa_quickshell) 2>&1 ); local rc=$?
-    uguale "1" "$rc" "con il file sbagliato si ferma"
-    case "$msg" in *controllo*) ok_prova "dice che il controllo non passa" ;; *) fallita "dice che il controllo non passa: $msg" ;; esac
-    chiamato "curl "
-    non_chiamato "cmake -S"
-}
-
 prova test_multilib
 prova test_mancanti
 prova test_tentativi
 prova test_controllo_iniziale
-prova test_quickshell_ripiego
 riassunto

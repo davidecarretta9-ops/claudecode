@@ -1,13 +1,11 @@
 # --- pacchetti: solo i repository ufficiali di Arch (core, extra, multilib) --------
-# Le liste le riempiono le fasi (PKG_FASE1..PKG_FASE4). Unico ripiego: Quickshell
-# compilato dai sorgenti ufficiali se un giorno non fosse nei repository.
+# Le liste le riempiono le fasi (PKG_FASE1..PKG_FASE4). Quickshell si compila sempre dai
+# sorgenti, alla versione che vuole Caelestia (vedi 45-caelestia.sh).
 PKG_FASE1=() PKG_FASE2=() PKG_FASE3=() PKG_FASE4=()
 
-QUICKSHELL_URL="https://git.outfoxxed.me/quickshell/quickshell/archive/v0.3.2.tar.gz"
-QUICKSHELL_SHA256="f14115a73c9fff6aa6399f924b632e88c3ce2cead2657f814a7825341f35baad"
 QUICKSHELL_DIPENDENZE=(cmake ninja pkgconf qt6-base qt6-declarative qt6-wayland qt6-svg
-                       qt6-shadertools wayland-protocols cli11 libdrm mesa pipewire
-                       jemalloc pam polkit)
+                       qt6-shadertools spirv-tools wayland wayland-protocols cli11 libdrm
+                       mesa vulkan-headers libxcb pipewire jemalloc pam polkit glib2 git)
 
 # multilib serve per Wine (i programmi Windows a 32 bit)
 abilita_multilib() {
@@ -53,27 +51,19 @@ installa_pacchetti() {
     muori "Non riesco a installare: $*"
 }
 
+# Caelestia vuole Quickshell alla sua versione git (non quella dei repository)
 installa_quickshell() {
-    if esegui pacman -Si quickshell >/dev/null 2>&1; then
-        installa_pacchetti quickshell
-    else
-        compila_quickshell
-    fi
+    compila_quickshell
 }
 
 compila_quickshell() {
-    info "Quickshell non e' nei repository: lo compilo dai sorgenti ufficiali (v0.3.2)"
+    info "Compilo Quickshell alla versione che usa Caelestia (qualche minuto)"
     installa_pacchetti "${QUICKSHELL_DIPENDENZE[@]}"
     local t; t=$(mktemp -d)
-    esegui curl -fL --retry 3 -o "$t/quickshell.tar.gz" "$QUICKSHELL_URL" \
-        || { rm -rf "$t"; muori "Non riesco a scaricare Quickshell"; }
-    if [ "$(sha256sum "$t/quickshell.tar.gz" | cut -d' ' -f1)" != "$QUICKSHELL_SHA256" ]; then
-        rm -rf "$t"
-        muori "Il file di Quickshell non passa il controllo (sha256): non lo uso"
-    fi
-    tar -xzf "$t/quickshell.tar.gz" -C "$t"
+    scarica_git "$QUICKSHELL_GIT_URL" "$QUICKSHELL_COMMIT" "$t/quickshell"
     esegui cmake -S "$t/quickshell" -B "$t/build" -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-        -DCMAKE_INSTALL_PREFIX=/usr -DDISTRIBUTOR="vetro-arch.sh" -DCRASH_HANDLER=OFF
+        -DCMAKE_INSTALL_PREFIX=/usr -DDISTRIBUTOR="oversicaOS" -DCRASH_HANDLER=OFF \
+        -DGIT_REVISION="$QUICKSHELL_COMMIT"
     esegui ninja -C "$t/build"
     esegui ninja -C "$t/build" install
     rm -rf "$t"
