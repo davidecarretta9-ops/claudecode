@@ -29,8 +29,8 @@ test_conf_hyprland() {
     # le impostazioni di partenza (copiate nella casa al primo accesso) dicono lo stesso
     contiene "$F/etc/xdg/hypr/vetro-impostazioni.lua" "rounding = 18"
     # barre del titolo chiare, titolo DM Sans, tasti senza cerchio con simboli scuri
-    contiene "$BARRE" 'bar_color = "rgba(f6f8fbff)"'
-    contiene "$BARRE" 'col = { text = "rgba(15181dff)" }'
+    contiene "$BARRE" 'bar_color = "rgba(1f201cff)"'
+    contiene "$BARRE" 'col = { text = "rgba(eeece4ff)" }'
     contiene "$BARRE" 'bar_text_font = "DM Sans"'
     contiene "$BARRE" 'pulsante("■", ingrandisci)'
     contiene "$BARRE" 'inactive_button_color = "rgba(00000000)"'
@@ -77,7 +77,7 @@ test_aspetto_gnome() {
     local g
     for g in gtk-3.0 gtk-4.0; do
         contiene "$F/etc/$g/settings.ini" "gtk-theme-name=Adwaita"
-        contiene "$F/etc/$g/settings.ini" "gtk-application-prefer-dark-theme=0"
+        contiene "$F/etc/$g/settings.ini" "gtk-application-prefer-dark-theme=1"
         contiene "$F/etc/$g/settings.ini" "gtk-cursor-theme-name=Vetro"
         contiene "$F/etc/$g/settings.ini" "gtk-font-name=DM Sans 11"
     done

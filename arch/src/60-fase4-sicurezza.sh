@@ -88,10 +88,8 @@ f4_fantasma() {
     u=$(utente_vetro) || exit 1
     esegui groupadd -f guardiano
     esegui usermod -aG guardiano "$u"
-    # sfondo scuro e icona del fantasma
-    mkdir -p "$(percorso /usr/share/backgrounds)"
-    esegui python3 -I "$(percorso /usr/local/lib/fantasma/disegna-fantasma)" sfondo \
-           "$(percorso /usr/share/backgrounds/sfondo-fantasma.png)"
+    # icona del fantasma (lo sfondo non cambia piu': in oversicaOS c'e' l'icona nella barra)
+    rm -f "$(percorso /usr/share/backgrounds/sfondo-fantasma.png)"
     for p in 32 48 64 128 256; do
         mkdir -p "$(percorso "/usr/share/icons/hicolor/${p}x${p}/apps")"
         esegui python3 -I "$(percorso /usr/local/lib/fantasma/disegna-fantasma)" icona \

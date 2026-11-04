@@ -198,7 +198,45 @@ def argento():
     return grana(base, 2.0, 6)
 
 
-SFONDI = {"sfera": sfera, "nuvole": nuvole, "cielo": cielo, "onde": onde, "magenta": magenta, "argento": argento}
+def grafite():
+    """oversicaOS: quasi nero, grande anello aperto (come il logo "Orbita") che esce dallo
+    schermo, puntino arancione che brilla nell'apertura; punte dell'anello tonde"""
+    y, x = np.mgrid[0:A, 0:L].astype(np.float32)
+    u, v = x / L, y / A
+    base = np.array([22, 23, 20], np.float32)
+    alto = np.array([36, 36, 31], np.float32)
+    img = base + (alto - base) * np.clip(1 - v * 1.1, 0, 1)[..., None]
+    cx, cy, r = 0.62 * L, 0.56 * A, 0.62 * A
+    spess = 0.075 * A
+    da, a = math.radians(-22.0), math.radians(292.0)       # l'apertura in alto a destra
+    ang = np.arctan2(y - cy, x - cx)
+    ang = np.where(ang < da, ang + 2 * math.pi, ang)
+    dist = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
+    dentro = (ang >= da) & (ang <= a)
+    # distanza dall'anello: sulla curva se l'angolo e' dentro, se no dalla punta piu' vicina
+    punte = [np.sqrt((x - (cx + r * math.cos(t))) ** 2 + (y - (cy + r * math.sin(t))) ** 2) for t in (da, a)]
+    d = np.where(dentro, np.abs(dist - r), np.minimum(*punte))
+    anello = np.clip(1 - d / (spess / 2), 0, 1) ** 0.6
+    crema = np.array([238, 236, 228], np.float32)
+    img = img * (1 - (anello * 0.10)[..., None]) + crema * (anello * 0.10)[..., None]
+    bordo = np.exp(-((d - spess / 2 + 2) / 2.0) ** 2) * 0.16
+    img = img + (crema - img) * bordo[..., None]
+    t = math.radians(315)
+    px, py = cx + r * math.cos(t), cy + r * math.sin(t)
+    d2 = np.sqrt((x - px) ** 2 + (y - py) ** 2)
+    rp = 0.055 * A
+    alone = np.exp(-(d2 / (rp * 4.5)) ** 2) * 0.55
+    img = img + (np.array([217, 112, 74], np.float32) - img) * alone[..., None]
+    corpo = np.clip((rp - d2) / 2.0 + 0.5, 0, 1)
+    img = img * (1 - corpo[..., None]) + np.array([222, 116, 78], np.float32) * corpo[..., None]
+    lucida = np.exp(-(((x - px + rp * 0.3) ** 2 + (y - py + rp * 0.35) ** 2) / (rp * 0.5) ** 2)) * corpo * 0.35
+    img = img + (255 - img) * lucida[..., None]
+    vign = 1 - 0.35 * (((u - 0.5) * 1.2) ** 2 + ((v - 0.5) * 1.2) ** 2)
+    img = img * vign[..., None]
+    return grana(Image.fromarray(img.clip(0, 255).astype(np.uint8), "RGB"), 3.0, 7)
+
+
+SFONDI = {"grafite": grafite, "sfera": sfera, "nuvole": nuvole, "cielo": cielo, "onde": onde, "magenta": magenta, "argento": argento}
 
 
 def main():
@@ -207,8 +245,9 @@ def main():
     cartella = sys.argv[1]
     for nome in sys.argv[2:] or list(SFONDI):
         img = SFONDI[nome]().convert("RGB")
-        img.save(f"{cartella}/vetro-{nome}.jpg", "JPEG", quality=88, optimize=True, progressive=True)
-        print(f"  vetro-{nome}.jpg")
+        nome_file = "oversica-grafite" if nome == "grafite" else f"vetro-{nome}"
+        img.save(f"{cartella}/{nome_file}.jpg", "JPEG", quality=88, optimize=True, progressive=True)
+        print(f"  {nome_file}.jpg")
 
 
 if __name__ == "__main__":

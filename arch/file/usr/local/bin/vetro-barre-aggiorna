@@ -61,8 +61,8 @@ make -C "$sorgente/hyprbars" all >"$t/make.log" 2>&1 \
     || { tail -n 20 "$t/make.log" >&2; senza_barre "il plugin non si compila per Hyprland $versione"; }
 install -Dm755 "$sorgente/hyprbars/hyprbars.so" "$PLUGIN"
 cat > "$CONF" << "FINE"
--- Barre del titolo delle finestre (creato da lfs.sh): plugin hyprbars, chiare con il
--- titolo al centro e i tasti scuri a destra. Hyprland 0.57 legge solo Lua.
+-- Barre del titolo delle finestre (creato da lfs.sh): plugin hyprbars, scure (grafite) con il
+-- titolo al centro e i tasti chiari a destra. Hyprland 0.57 legge solo Lua.
 -- Trascina la barra per spostare la finestra, doppio clic per ingrandirla.
 -- Pulsanti a destra: chiudi, ingrandisci, riduci.
 -- Per toglierle: in ~/.config/hypr/personale.lua scrivi
@@ -77,8 +77,8 @@ if rawget(hl.plugin, "hyprbars") then
         plugin = {
             hyprbars = {
                 bar_height = 34,
-                bar_color = "rgba(f6f8fbff)",
-                col = { text = "rgba(15181dff)" },
+                bar_color = "rgba(1f201cff)",
+                col = { text = "rgba(eeece4ff)" },
                 bar_text_font = "DM Sans",
                 bar_text_size = 12,
                 bar_text_align = "center",
@@ -94,7 +94,7 @@ if rawget(hl.plugin, "hyprbars") then
     })
     -- il primo pulsante e' il piu' a destra
     local function pulsante(simbolo, comando)
-        hl.plugin.hyprbars.add_button({ bg_color = "rgba(00000000)", fg_color = "rgba(15181dff)",
+        hl.plugin.hyprbars.add_button({ bg_color = "rgba(00000000)", fg_color = "rgba(eeece4ff)",
                                         size = 22, icon = simbolo, action = comando })
     end
     pulsante("✕", "hyprctl dispatch 'hl.dsp.window.close()'")

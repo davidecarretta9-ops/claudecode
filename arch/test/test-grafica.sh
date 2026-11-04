@@ -33,11 +33,42 @@ test_gtk() {
     local v
     for v in 3.0 4.0; do
         uguale "/* Vetro (creato da vetro-arch.sh)" "$(head -c 34 "$F/etc/xdg/vetro/gtk-$v.css" 2>/dev/null)" \
-               "gtk-$v.css: prima riga di Vetro"
-        contiene "$F/etc/xdg/vetro/gtk-$v.css" "#1a8cff"
+               "gtk-$v.css: prima riga di Vetro (avvia-desktop la riconosce)"
+        contiene "$F/etc/xdg/vetro/gtk-$v.css" "#d9704a"
+        non_contiene "$F/etc/xdg/vetro/gtk-$v.css" "#1a8cff"
     done
     contiene "$F/etc/xdg/vetro/gtk-3.0.css" ".sidebar row:selected"
-    contiene "$F/etc/xdg/vetro/gtk-4.0.css" "@define-color accent_bg_color #1a8cff;"
+}
+
+test_gtk_arancio() {
+    contiene "$F/etc/xdg/vetro/gtk-4.0.css" "@define-color accent_bg_color #d9704a;"
+}
+
+test_sfondo_grafite() {
+    local f="$F/usr/share/backgrounds/oversica-grafite.jpg"
+    uguale "ffd8" "$(head -c 2 "$f" 2>/dev/null | od -An -tx1 | tr -d ' \n')" "oversica-grafite.jpg e' un JPEG"
+    uguale "2560x1440" "$(misura_jpg "$f")" "oversica-grafite.jpg 2560x1440"
+    if [ -f "$f" ] && [ "$(stat -c %s "$f")" -lt 716800 ]; then ok_prova "sotto 700 KB"
+    else fallita "manca o supera 700 KB"; fi
+}
+
+test_wallpaper_webp() {
+    # lo sfondo di riserva di Caelestia (quello della prima volta) e' il Grafite
+    local w="$F/usr/local/lib/vetro/caelestia/nuovi/assets/wallpaper.webp"
+    uguale "RIFF" "$(head -c 4 "$w" 2>/dev/null)" "wallpaper.webp: RIFF"
+    uguale "WEBP" "$(dd if="$w" bs=1 skip=8 count=4 2>/dev/null)" "wallpaper.webp: WEBP"
+}
+
+test_fantasma_non_cambia_sfondo() {
+    non_contiene "$F/usr/local/bin/sfondo-desktop" "sfondo-fantasma"
+    non_contiene "$ARCH_DIR/src/60-fase4-sicurezza.sh" "disegna-fantasma)\" sfondo"
+}
+
+test_patch_fantasma() {
+    local r="$F/usr/local/lib/vetro/caelestia"
+    contiene "$r/nuovi/modules/bar/components/status/Fantasma.qml" "/etc/fantasma/attivo"
+    contiene "$r/nuovi/modules/bar/components/status/Fantasma.qml" "visibility_off"
+    contiene "$r/ritocchi/03-fantasma-barra.patch" "Fantasma {"
 }
 
 test_avvia_desktop_css() {
@@ -48,9 +79,9 @@ test_avvia_desktop_css() {
     printf '#!/bin/sh\necho oversica-config >> "%s/.chiamate"\n' "$RADICE" > "$bin/oversica-config"; chmod +x "$bin/oversica-config"
     echo "/* il mio */" > "$RADICE/casa/.config/gtk-4.0/gtk.css"
     HOME="$RADICE/casa" VETRO_CSS="$F/etc/xdg/vetro" PATH="$bin:$PATH" bash "$F/usr/local/bin/avvia-desktop" >/dev/null 2>&1
-    contiene "$RADICE/casa/.config/gtk-3.0/gtk.css" "#1a8cff"
+    contiene "$RADICE/casa/.config/gtk-3.0/gtk.css" "#d9704a"
     contiene "$RADICE/casa/.config/gtk-4.0/gtk.css" "/* il mio */"
-    non_contiene "$RADICE/casa/.config/gtk-4.0/gtk.css" "#1a8cff"
+    non_contiene "$RADICE/casa/.config/gtk-4.0/gtk.css" "#d9704a"
     chiamato "oversica-config"
 }
 
@@ -92,10 +123,7 @@ test_sfondi() {
 }
 
 test_sfondo_di_partenza() {
-    contiene "$V/Sfondi.qml" "vetro-sfera.jpg"
-    contiene "$F/usr/local/bin/sfondo-desktop" "vetro-sfera.jpg"
-    non_contiene "$V/Sfondi.qml" "sfondo-desktop.png"
-    non_contiene "$F/usr/local/bin/sfondo-desktop" "sfondo-desktop.png"
+    contiene "$F/usr/local/bin/sfondo-desktop" "oversica-grafite.jpg"
 }
 
 test_f2_senza_disegna_vetro() {
@@ -146,5 +174,10 @@ prova test_carattere
 prova test_tema
 prova test_logo
 prova test_gtk
+prova test_gtk_arancio
+prova test_sfondo_grafite
+prova test_wallpaper_webp
+prova test_fantasma_non_cambia_sfondo
+prova test_patch_fantasma
 prova test_avvia_desktop_css
 riassunto

@@ -1,0 +1,18 @@
+diff --git a/modules/bar/components/StatusIcons.qml b/modules/bar/components/StatusIcons.qml
+index 90ad09b..5997577 100644
+--- a/modules/bar/components/StatusIcons.qml
++++ b/modules/bar/components/StatusIcons.qml
+@@ -57,6 +57,13 @@ StyledRect {
+ 
+         spacing: 0
+ 
++        // oversicaOS: modalita' fantasma accesa
++        Fantasma {
++            Layout.alignment: Qt.AlignHCenter
++            Layout.bottomMargin: visible ? root.spacing : 0
++            colour: root.colour
++        }
++
+         Repeater {
+             model: ScriptModel {
+                 id: model

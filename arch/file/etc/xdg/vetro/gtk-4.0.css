@@ -1,24 +1,24 @@
-/* Vetro (creato da vetro-arch.sh): app GTK 4 chiare con l'accento blu.
+/* Vetro (creato da vetro-arch.sh): app GTK 4 scure con l'accento arancio di oversicaOS.
    Si riscrive a ogni accesso finche' la prima riga resta questa: per tenere le tue
    modifiche cambia la prima riga. */
-@define-color accent_bg_color #1a8cff;
-@define-color accent_color #1a8cff;
+@define-color accent_bg_color #d9704a;
+@define-color accent_color #d9704a;
 @define-color accent_fg_color #ffffff;
-@define-color window_bg_color #f5f7fa;
-@define-color window_fg_color #15181d;
-@define-color sidebar_bg_color #ffffff;
+@define-color window_bg_color #1f201c;
+@define-color window_fg_color #eeece4;
+@define-color sidebar_bg_color #262722;
 :root {
-    --accent-bg-color: #1a8cff;
-    --accent-color: #1a8cff;
+    --accent-bg-color: #d9704a;
+    --accent-color: #d9704a;
     --accent-fg-color: #ffffff;
-    --window-bg-color: #f5f7fa;
-    --window-fg-color: #15181d;
-    --sidebar-bg-color: #ffffff;
+    --window-bg-color: #1f201c;
+    --window-fg-color: #eeece4;
+    --sidebar-bg-color: #262722;
 }
 .navigation-sidebar > row {
     border-radius: 10px;
 }
 .navigation-sidebar > row:selected {
-    background-color: #1a8cff;
+    background-color: #d9704a;
     color: #ffffff;
 }
