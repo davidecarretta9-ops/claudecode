@@ -76,6 +76,36 @@ test_registri_root() {
     esiste "$RADICE/root/registri-vetro.txt"
 }
 
+test_dove_sono() {
+    radice_finta
+    export VETRO_PC="$RADICE/pc/vetro-arch"
+    rm -f "$RADICE/etc/arch-release"
+    uguale "pc" "$(dove_sono)" "senza /etc/arch-release: sul PC"
+    mkdir -p "$RADICE/etc"; : > "$RADICE/etc/arch-release"
+    uguale "arch" "$(dove_sono)" "con /etc/arch-release: dentro Arch"
+    mkdir -p "$VETRO_PC"; : > "$VETRO_PC/disco.qcow2"
+    uguale "pc" "$(dove_sono)" "un PC con Arch che ha la macchina virtuale: sul PC"
+}
+
+test_aiuto_comandi() {
+    aiuto > "$ARCH_DIR/.aiuto" 2>&1
+    contiene "$ARCH_DIR/.aiuto" "sudo bash lfs.sh fase10"
+    contiene "$ARCH_DIR/.aiuto" "sudo bash lfs.sh avvia"
+    contiene "$ARCH_DIR/.aiuto" "sudo bash lfs.sh installa"
+    contiene "$ARCH_DIR/.aiuto" "sudo bash lfs.sh registri"
+    rm -f "$ARCH_DIR/.aiuto"
+}
+
+test_comandi_pc_senza_pezzo() {
+    # se il pezzo del PC manca, fase10 si ferma con un messaggio chiaro
+    ( unset -f pc_fase10 2>/dev/null; principale fase10 ) > "$ARCH_DIR/.uscita" 2>&1
+    uguale 1 "$?" "fase10 senza il pezzo del PC si ferma"
+    rm -f "$ARCH_DIR/.uscita"
+}
+
+prova test_dove_sono
+prova test_aiuto_comandi
+prova test_comandi_pc_senza_pezzo
 prova test_ram
 prova test_servizi
 prova test_registri_condivisa

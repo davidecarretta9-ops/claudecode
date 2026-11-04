@@ -131,9 +131,17 @@ f4_utente_fantasma() {
     ok "Utente fantasma (casa in memoria)"
 }
 
-# la password dell'utente fantasma: si chiede alla fine (i passi non possono chiedere
-# niente), solo se non ce l'ha ancora
+# la password dell'utente fantasma: dall'impronta lasciata da "fase10", se c'e'; se no
+# si chiede alla fine (i passi non possono chiedere niente), solo se non ce l'ha ancora
 password_fantasma() {
+    # installata da "fase10": l'impronta della password l'ha data il PC
+    local impronta
+    impronta=$(percorso /etc/vetro/fantasma.hash)
+    if [ -s "$impronta" ]; then
+        esegui usermod -p "$(cat "$impronta")" fantasma
+        rm -f "$impronta"
+        return 0
+    fi
     [ -n "${VETRO_PROVA:-}" ] && return 0
     case "$(esegui passwd -S fantasma 2>/dev/null | cut -d' ' -f2 || true)" in
         L|NP) ;;

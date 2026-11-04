@@ -2,17 +2,48 @@
 
 aiuto() {
     cat <<'EOF'
-vetro-arch.sh — il desktop Vetro su Arch Linux
+lfs.sh — Vetro su Arch Linux (il desktop Vetro, leggero, con la modalita' fantasma)
 
-  sudo bash vetro-arch.sh              fa tutto (o riprende da dove era)
-  sudo bash vetro-arch.sh controlla    a che punto e' il sistema
-  sudo bash vetro-arch.sh registri     raccoglie i registri in un file
-  sudo bash vetro-arch.sh rifai PASSO  rifa' un passo
+Sul tuo PC (Fedora, Ubuntu...), con una macchina virtuale:
+  sudo bash lfs.sh fase10      crea la macchina con Arch e Vetro (la prima volta),
+                               oppure aggiorna Vetro dentro la macchina
+  sudo bash lfs.sh avvia       accende la macchina con lo schermo
+  sudo bash lfs.sh registri    raccoglie i registri della macchina in un file
+  sudo bash lfs.sh controlla   dice come sta la macchina
+
+Dentro un Arch gia' installato (anche un PC vero):
+  sudo bash lfs.sh installa    installa o aggiorna Vetro su questo computer
+  sudo bash lfs.sh controlla   a che punto e' il sistema
+  sudo bash lfs.sh registri    raccoglie i registri in un file
+  sudo bash lfs.sh rifai PASSO rifa' un passo
 EOF
 }
 
+# la cartella della macchina virtuale sul PC: ~/vetro-arch dell'utente che ha fatto sudo
+cartella_pc() {
+    local u=${SUDO_USER:-root} casa
+    casa=$(getent passwd "$u" 2>/dev/null | cut -d: -f6)
+    printf '%s\n' "${VETRO_PC:-${casa:-/root}/vetro-arch}"
+}
+
+# dove_sono -> "arch" (dentro Arch, si lavora su questo computer) | "pc" (sul PC
+# con la macchina virtuale)
+dove_sono() {
+    if [ -f "$(percorso /etc/arch-release)" ] && [ ! -f "$(cartella_pc)/disco.qcow2" ]; then
+        echo arch
+    else
+        echo pc
+    fi
+}
+
+# un comando del pezzo "PC" (80-pc.sh): se manca, un messaggio chiaro
+comando_pc() {
+    declare -F "$1" >/dev/null || muori "Questo lfs.sh non sa gestire la macchina virtuale"
+    "$@"
+}
+
 cmd_tutto() {
-    serve_root tutto
+    serve_root installa
     controlla_arch
     # (pacchetti: li aggiunge il pezzo dei pacchetti, se c'e')
     if declare -F abilita_multilib >/dev/null; then abilita_multilib; fi
@@ -23,6 +54,8 @@ cmd_tutto() {
     titolo "Fase 4 - sicurezza";             esegui_fase "${FASE4[@]}"
     if declare -F password_fantasma >/dev/null; then password_fantasma; fi
     titolo "Fatto. Riavvia il computer:  reboot"
+    mkdir -p "$VETRO_STATO"
+    date '+%F %T' > "$VETRO_STATO/installato"
 }
 
 # passi non ancora fatti (per "controlla")
@@ -131,7 +164,7 @@ cmd_registri() {
 
 cmd_rifai() {
     serve_root rifai
-    [ -n "${1:-}" ] || muori "Quale passo? Esempio:  sudo bash $0 rifai desktop"
+    [ -n "${1:-}" ] || muori "Quale passo? Esempio:  sudo bash lfs.sh rifai desktop"
     rifai_passo "$1"
     ok "Il passo $1 si rifa' al prossimo lancio"
 }
@@ -144,10 +177,12 @@ estrai_archivio() {
 }
 
 principale() {
-    case "${1:-tutto}" in
-        tutto)            cmd_tutto ;;
-        controlla)        cmd_controlla ;;
-        registri)         cmd_registri ;;
+    case "${1:-aiuto}" in
+        installa|tutto)   cmd_tutto ;;
+        fase10)           comando_pc pc_fase10 "${@:2}" ;;
+        avvia)            comando_pc pc_avvia "${@:2}" ;;
+        controlla|registri)
+            if [ "$(dove_sono)" = arch ]; then "cmd_$1"; else comando_pc pc_comando "$1"; fi ;;
         rifai)            cmd_rifai "${2:-}" ;;
         _estrai)          estrai_archivio "${2:?cartella}" ;;
         aiuto|-h|--help)  aiuto ;;

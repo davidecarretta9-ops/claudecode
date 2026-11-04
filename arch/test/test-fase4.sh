@@ -140,5 +140,16 @@ prova test_fase4
 prova test_pacchetti_gia_presenti
 prova test_utente_fantasma
 prova test_password_fantasma
+test_password_da_impronta() {
+    radice_finta; finto usermod; finto passwd
+    mkdir -p "$RADICE/etc/vetro"
+    printf '%s\n' '$6$sale$impronta' > "$RADICE/etc/vetro/fantasma.hash"
+    VETRO_PROVA= password_fantasma >/dev/null 2>&1 < /dev/null
+    chiamato 'usermod -p $6$sale$impronta fantasma'
+    non_chiamato "passwd fantasma"
+    non_esiste "$RADICE/etc/vetro/fantasma.hash"
+}
+
+prova test_password_da_impronta
 prova test_script
 riassunto
