@@ -5,7 +5,7 @@ PKG_FASE2=(hyprland quickshell greetd xdg-desktop-portal-hyprland pipewire wirep
 FILE_DESKTOP="etc/xdg/hypr usr/local/lib/vetro etc/gtk-3.0 etc/gtk-4.0
               usr/local/bin/avvia-desktop usr/local/bin/avvio-vetro usr/local/bin/avvia-pannelli
               usr/local/bin/blocca-schermo usr/local/bin/sfondo-desktop usr/local/bin/schermata
-              usr/local/bin/oversica-config
+              usr/local/bin/oversica-config usr/local/bin/oversica-avatar usr/share/oversica
               usr/local/bin/vetro-barre-aggiorna etc/pam.d/vetro-blocco
               etc/pacman.d/hooks/vetro-barre.hook usr/share/icons/default/index.theme
               usr/share/fonts/dm-sans usr/share/icons/hicolor/scalable/apps/vetro.svg etc/xdg/vetro

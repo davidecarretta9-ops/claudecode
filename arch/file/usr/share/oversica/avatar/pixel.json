@@ -1,0 +1,261 @@
+{
+ "_": "Avatar a pixel di oversicaOS (creato da lfs.sh), in stile Oversica Lodge. Griglia 16x16: '.' sfondo; corpo: s/S pelle (S = ombra), m/M maglia, o occhi, b bocca; capelli: h/H. Si disegna: corpo, poi capelli sopra. Lo usano oversica-avatar (PNG) e Avatar.js (Impostazioni).",
+ "lato": 16,
+ "sfondo": "#33342e",
+ "fissi": {
+  "o": "#1f201c",
+  "b": "#a0523c"
+ },
+ "predefinite": {
+  "capelli": "corti",
+  "coloreCapelli": 2,
+  "pelle": 1,
+  "maglia": 2
+ },
+ "corpo": [
+  "................",
+  "................",
+  "................",
+  ".....ssssss.....",
+  "....ssssssss....",
+  "....ssssssss....",
+  "...SssssssssS...",
+  "...SssossossS...",
+  "....ssssssss....",
+  "....sssbbsss....",
+  ".....ssssss.....",
+  "......SSSS......",
+  "...mmmMMMMmmm...",
+  "..mmmmmmmmmmmm..",
+  ".mmmmmmmmmmmmmm.",
+  ".mmMmmmmmmmmmMm."
+ ],
+ "capelli": {
+  "corti": [
+   "................",
+   "................",
+   ".....hhhhhh.....",
+   "....hhhhhhhh....",
+   "...hhhhhhhhHh...",
+   "...hh......hh...",
+   "...h........h...",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................"
+  ],
+  "folti": [
+   "................",
+   ".....hhhhhh.....",
+   "...hhhhhhhhhh...",
+   "..hhhhhhhhhhhh..",
+   "..hhhhhhhhhhHh..",
+   "..hhh......hHh..",
+   "..hh........hh..",
+   "..h..........h..",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................"
+  ],
+  "lunghi": [
+   "................",
+   "................",
+   ".....hhhhhh.....",
+   "....hhhhhhhh....",
+   "...hhhhhhhhhh...",
+   "...hh......hh...",
+   "..hhh......hhh..",
+   "..hh........hh..",
+   "..hh........hh..",
+   "..hh........hh..",
+   "..hhh......hhh..",
+   "..hhH......Hhh..",
+   "..hH........Hh..",
+   "..H..........H..",
+   "................",
+   "................"
+  ],
+  "raccolti": [
+   "......hhhh......",
+   "......hHHh......",
+   ".....hhhhhh.....",
+   "....hhhhhhhh....",
+   "...hhhhhhhhhh...",
+   "...h........h...",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................"
+  ],
+  "ricci": [
+   "................",
+   "....h.hh.h.h....",
+   "...hhhhhhhhhh...",
+   "..hhHhhHhhHhhh..",
+   "..hhhhhhhhhhhh..",
+   "..hHh......hHh..",
+   "..hh........hh..",
+   "...h........h...",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................"
+  ],
+  "rasati": [
+   "................",
+   "................",
+   "................",
+   ".....HHHHHH.....",
+   "....HhhhhhhH....",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................",
+   "................"
+  ]
+ },
+ "tavolozze": {
+  "capelli": [
+   {
+    "nome": "Nero",
+    "colore": "#2b2420",
+    "ombra": "#1a1512"
+   },
+   {
+    "nome": "Castano scuro",
+    "colore": "#4a3020",
+    "ombra": "#33200f"
+   },
+   {
+    "nome": "Castano",
+    "colore": "#7a4a2a",
+    "ombra": "#5a321a"
+   },
+   {
+    "nome": "Biondo",
+    "colore": "#d9b46a",
+    "ombra": "#b08a45"
+   },
+   {
+    "nome": "Rosso",
+    "colore": "#b5482a",
+    "ombra": "#8a3018"
+   },
+   {
+    "nome": "Grigio",
+    "colore": "#9a9a96",
+    "ombra": "#74746f"
+   },
+   {
+    "nome": "Blu",
+    "colore": "#3d5a9e",
+    "ombra": "#2a4070"
+   },
+   {
+    "nome": "Rosa",
+    "colore": "#d98aa8",
+    "ombra": "#b06a86"
+   }
+  ],
+  "pelle": [
+   {
+    "nome": "Chiarissima",
+    "colore": "#f6dcc4",
+    "ombra": "#e3bea0"
+   },
+   {
+    "nome": "Chiara",
+    "colore": "#eec39a",
+    "ombra": "#d6a47a"
+   },
+   {
+    "nome": "Media",
+    "colore": "#d9a072",
+    "ombra": "#bf8556"
+   },
+   {
+    "nome": "Olivastra",
+    "colore": "#b57a4e",
+    "ombra": "#98623a"
+   },
+   {
+    "nome": "Scura",
+    "colore": "#8a5534",
+    "ombra": "#6e4126"
+   },
+   {
+    "nome": "Molto scura",
+    "colore": "#5e3a24",
+    "ombra": "#472a18"
+   }
+  ],
+  "maglia": [
+   {
+    "nome": "Arancio",
+    "colore": "#d9704a",
+    "ombra": "#b8573a"
+   },
+   {
+    "nome": "Grafite",
+    "colore": "#4a4b44",
+    "ombra": "#3a3b35"
+   },
+   {
+    "nome": "Blu",
+    "colore": "#3f6fb5",
+    "ombra": "#2f548c"
+   },
+   {
+    "nome": "Verde",
+    "colore": "#4f8f5a",
+    "ombra": "#3a6b43"
+   },
+   {
+    "nome": "Rosso",
+    "colore": "#b83a3a",
+    "ombra": "#8f2a2a"
+   },
+   {
+    "nome": "Giallo",
+    "colore": "#e0b040",
+    "ombra": "#b88c2c"
+   },
+   {
+    "nome": "Viola",
+    "colore": "#7a52a8",
+    "ombra": "#5c3c80"
+   },
+   {
+    "nome": "Bianco",
+    "colore": "#e8e6de",
+    "ombra": "#c8c6be"
+   }
+  ]
+ }
+}

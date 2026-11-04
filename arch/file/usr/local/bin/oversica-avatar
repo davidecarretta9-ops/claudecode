@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+"""oversicaOS: l'avatar a pixel in stile Oversica Lodge (creato da lfs.sh).
+
+  oversica-avatar disegna SCELTE.json USCITA.png [--lato 256]
+
+SCELTE.json: {"capelli": "corti|folti|lunghi|raccolti|ricci|rasati",
+              "coloreCapelli": 0-7, "pelle": 0-5, "maglia": 0-7}
+Le scelte che mancano o non valgono diventano quelle predefinite. I pixel e i colori
+sono in /usr/share/oversica/avatar/pixel.json (lo stesso file che usa Avatar.js nelle
+Impostazioni, cosi' l'anteprima e il PNG sono identici)."""
+import json
+import os
+import struct
+import sys
+import tempfile
+import zlib
+
+DATI = os.environ.get("OVERSICA_AVATAR_DATI", "/usr/share/oversica/avatar/pixel.json")
+STILI = ["corti", "folti", "lunghi", "raccolti", "ricci", "rasati"]
+QUANTI = {"coloreCapelli": 8, "pelle": 6, "maglia": 8}
+PREDEFINITE = {"capelli": "corti", "coloreCapelli": 2, "pelle": 1, "maglia": 2}
+
+
+def normalizza(scelte):
+    """Le scelte valide, con le predefinite al posto di quelle che mancano o non valgono."""
+    s = dict(PREDEFINITE)
+    if not isinstance(scelte, dict):
+        return s
+    if scelte.get("capelli") in STILI:
+        s["capelli"] = scelte["capelli"]
+    for campo, quanti in QUANTI.items():
+        v = scelte.get(campo)
+        if isinstance(v, int) and not isinstance(v, bool) and 0 <= v < quanti:
+            s[campo] = v
+    return s
+
+
+def griglia(dati, scelte):
+    """La griglia dei colori ("#rrggbb", None = sfondo): il corpo, poi i capelli sopra."""
+    s = normalizza(scelte)
+    t = dati["tavolozze"]
+    capelli = t["capelli"][s["coloreCapelli"]]
+    pelle = t["pelle"][s["pelle"]]
+    maglia = t["maglia"][s["maglia"]]
+    colori = dict(dati["fissi"], s=pelle["colore"], S=pelle["ombra"], m=maglia["colore"], M=maglia["ombra"])
+    g = [[colori.get(c) for c in riga] for riga in dati["corpo"]]
+    for y, riga in enumerate(dati["capelli"][s["capelli"]]):
+        for x, c in enumerate(riga):
+            if c == "h":
+                g[y][x] = capelli["colore"]
+            elif c == "H":
+                g[y][x] = capelli["ombra"]
+    return g
+
+
+def png(g, sfondo, blocco):
+    """PNG a colori pieni (niente sfumature): ogni pixel della griglia e' un quadrato."""
+    def rgb(c):
+        c = (c or sfondo).lstrip("#")
+        return bytes(int(c[i:i + 2], 16) for i in (0, 2, 4))
+
+    righe = b""
+    for riga in g:
+        linea = b"\x00" + b"".join(rgb(c) * blocco for c in riga)
+        righe += linea * blocco
+    lato = len(g[0]) * blocco
+
+    def pezzo(tipo, dati):
+        return struct.pack(">I", len(dati)) + tipo + dati + struct.pack(">I", zlib.crc32(tipo + dati) & 0xFFFFFFFF)
+
+    return (b"\x89PNG\r\n\x1a\n"
+            + pezzo(b"IHDR", struct.pack(">IIBBBBB", lato, len(g) * blocco, 8, 2, 0, 0, 0))
+            + pezzo(b"IDAT", zlib.compress(righe, 9))
+            + pezzo(b"IEND", b""))
+
+
+def disegna(file_scelte, uscita, lato=256):
+    with open(DATI, encoding="utf-8") as f:
+        dati = json.load(f)
+    try:
+        with open(file_scelte, encoding="utf-8") as f:
+            scelte = json.load(f)
+    except (OSError, ValueError):
+        scelte = {}
+    blocco = max(1, lato // dati["lato"])
+    contenuto = png(griglia(dati, scelte), dati["sfondo"], blocco)
+    cartella = os.path.dirname(os.path.abspath(uscita))
+    fd, temp = tempfile.mkstemp(dir=cartella, suffix=".png")
+    with os.fdopen(fd, "wb") as f:
+        f.write(contenuto)
+    os.chmod(temp, 0o644)
+    os.replace(temp, uscita)
+
+
+def main(argv):
+    if len(argv) >= 3 and argv[0] == "disegna":
+        lato = 256
+        if len(argv) >= 5 and argv[3] == "--lato":
+            lato = int(argv[4])
+        disegna(argv[1], argv[2], lato)
+        return 0
+    print(__doc__.strip().splitlines()[2], file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

@@ -130,6 +130,8 @@ test_f2_desktop() {
     chiamato "systemctl --global enable pipewire.socket wireplumber.service pipewire-pulse.socket"
     chiamato "compila_caelestia"
     esiste "$RADICE/usr/local/bin/oversica-config"
+    esiste "$RADICE/usr/local/bin/oversica-avatar"
+    esiste "$RADICE/usr/share/oversica/avatar/pixel.json"
     esiste "$RADICE/usr/share/fonts/material-symbols/MaterialSymbolsRounded.ttf"
 }
 
