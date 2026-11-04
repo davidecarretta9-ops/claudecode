@@ -18,9 +18,11 @@ mkdir -p "$(dirname "$uscita")"
     cat <<'FINE'
 # ===== avvio
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    VETRO_LFS=${VETRO_LFS:-$(readlink -f "${BASH_SOURCE[0]}")}
+    trap pulisci EXIT
     if [ -z "${VETRO_FILE:-}" ]; then
         VETRO_FILE=$(mktemp -d)
-        trap 'rm -rf "$VETRO_FILE"' EXIT
+        VETRO_FILE_TEMP=$VETRO_FILE
         estrai_archivio "$VETRO_FILE"
     fi
     principale "$@"

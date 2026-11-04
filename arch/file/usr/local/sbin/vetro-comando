@@ -39,8 +39,17 @@ esac
 
 echo
 echo "=== Vetro: $comando (dal PC) ==="
+esito=ok
 if ! bash "$LFS" "$comando"; then
+    esito=errore
     echo "=== Vetro: $comando NON riuscito (rilancia lo stesso comando sul PC) ==="
+fi
+# l'esito al PC: nella cartella condivisa, o con il server
+if [ "$da_server" = 0 ] && [ -d "$CONDIVISA" ]; then
+    echo "$esito" > "$CONDIVISA/.esito"
+else
+    printf '%s\n' "$esito" > /tmp/vetro-esito
+    curl -fsS -T /tmp/vetro-esito "$SERVER/.esito" || true
 fi
 # senza cartella condivisa i registri tornano al PC dal server
 if [ "$comando" = registri ] && [ "$da_server" = 1 ] && [ -f "$R/root/registri-vetro.txt" ]; then

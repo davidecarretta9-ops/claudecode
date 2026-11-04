@@ -28,7 +28,7 @@ avviso() { printf '  [!!] %s\n' "$*" >&2; }
 muori()  { printf '\n  [ERRORE] %s\n\n' "$*" >&2; exit 1; }
 
 serve_root() {
-    [ "${VETRO_EUID:-$EUID}" -eq 0 ] || muori "Lancialo come root:  sudo bash $0 ${1:-}"
+    [ "${VETRO_EUID:-$EUID}" -eq 0 ] || muori "Lancialo come root:  sudo bash lfs.sh ${1:-}"
 }
 
 controlla_arch() {

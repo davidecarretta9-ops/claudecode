@@ -36,6 +36,12 @@ dove_sono() {
     fi
 }
 
+# all'uscita: ferma il server della macchina (se c'e') e toglie i file estratti
+pulisci() {
+    if declare -F pc_server_ferma >/dev/null; then pc_server_ferma; fi
+    if [ -n "${VETRO_FILE_TEMP:-}" ]; then rm -rf "$VETRO_FILE_TEMP"; fi
+}
+
 # un comando del pezzo "PC" (80-pc.sh): se manca, un messaggio chiaro
 comando_pc() {
     declare -F "$1" >/dev/null || muori "Questo lfs.sh non sa gestire la macchina virtuale"
@@ -131,6 +137,9 @@ scrivi_registri() {
     done
     sezione "Registro di sistema (avvisi)"
     esegui journalctl -b -p warning --no-pager 2>/dev/null | tail -n 300
+    # la volta prima (registri della macchina virtuale: si accende apposta per raccoglierli)
+    sezione "Registro di sistema, accensione precedente (avvisi)"
+    esegui journalctl -b -1 -p warning --no-pager 2>/dev/null | tail -n 300
     u=$(utente_vetro 2>/dev/null) || u=""
     [ -n "$u" ] || return 0
     casa=$(esegui getent passwd "$u" 2>/dev/null | cut -d: -f6)

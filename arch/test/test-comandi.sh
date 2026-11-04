@@ -61,6 +61,7 @@ FINE
     contiene "$f" "errore del passo desktop"
     non_contiene "$f" "registro del passo fatto"
     contiene "$f" "=== Registro di sistema (avvisi)"
+    contiene "$f" "=== Registro di sistema, accensione precedente (avvisi)"
     contiene "$f" "avviso del sistema"
     contiene "$f" "=== Hyprland"
     contiene "$f" "riga di hyprland"
