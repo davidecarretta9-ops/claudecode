@@ -1,5 +1,5 @@
 #!/bin/bash
-# Prova di tutto il giro (sudo bash vetro-arch.sh) in una cartella finta: tutte le fasi,
+# Prova di tutto il giro (sudo bash lfs.sh installa) in una cartella finta: tutte le fasi,
 # con i comandi finti. Serve a vedere che i pezzi si incastrano (Task 13).
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 carica_src

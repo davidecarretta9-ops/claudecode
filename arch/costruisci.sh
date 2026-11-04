@@ -1,15 +1,15 @@
 #!/bin/bash
-# Unisce arch/src/*.sh e la cartella arch/file/ in un solo file: arch/dist/vetro-arch.sh
+# Unisce arch/src/*.sh e la cartella arch/file/ in un solo file: arch/dist/lfs.sh
 #   bash arch/costruisci.sh [CARTELLA_FILE] [USCITA]
 set -euo pipefail
 qui=$(cd "$(dirname "$0")" && pwd)
 file=${1:-$qui/file}
-uscita=${2:-$qui/dist/vetro-arch.sh}
+uscita=${2:-$qui/dist/lfs.sh}
 mkdir -p "$(dirname "$uscita")"
 
 {
     echo '#!/bin/bash'
-    echo '# vetro-arch.sh: generato da arch/costruisci.sh (i sorgenti sono in arch/src e arch/file)'
+    echo '# lfs.sh (Vetro su Arch): generato da arch/costruisci.sh (i sorgenti sono in arch/src e arch/file)'
     echo 'set -Eeuo pipefail'
     for f in "$qui"/src/*.sh; do
         echo "# ===== $(basename "$f")"

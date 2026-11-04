@@ -1,5 +1,5 @@
 #!/bin/bash
-# Esegue tutte le prove di vetro-arch.sh: test-*.sh e test/python/test_*.py
+# Esegue tutte le prove di lfs.sh (Vetro su Arch): test-*.sh e test/python/test_*.py
 # Uso: bash arch/test/esegui.sh [nome-file-di-prova...]
 QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 falliti=0

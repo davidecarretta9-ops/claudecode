@@ -1,12 +1,15 @@
 # =============================================================================
-#  vetro-arch.sh — il desktop "Vetro" su Arch Linux (leggero, aspetto GNOME,
-#  sicurezza: modalita' fantasma, firewall, Guardiano della rete, VPN...).
-#  Si lancia come root su un Arch appena installato (guida: GUIDA-INSTALLAZIONE.md).
+#  lfs.sh — Vetro su Arch Linux: il desktop "Vetro" (leggero, sicurezza:
+#  modalita' fantasma, firewall, Guardiano della rete, VPN...). Un solo file.
 #
-#    sudo bash vetro-arch.sh              fa tutto (o riprende da dove era)
-#    sudo bash vetro-arch.sh controlla    a che punto e' il sistema
-#    sudo bash vetro-arch.sh registri     raccoglie i registri in un file
-#    sudo bash vetro-arch.sh rifai PASSO  rifa' un passo
+#  Sul tuo PC, con una macchina virtuale:
+#    sudo bash lfs.sh fase10      crea la macchina con Arch e Vetro, o aggiorna Vetro
+#    sudo bash lfs.sh avvia       la accende con lo schermo
+#    sudo bash lfs.sh registri    raccoglie i registri della macchina
+#    sudo bash lfs.sh controlla   dice come sta la macchina
+#  Dentro un Arch gia' installato (anche un PC vero):
+#    sudo bash lfs.sh installa    installa o aggiorna Vetro (riprende da dove era)
+#    sudo bash lfs.sh controlla | registri | rifai PASSO
 #
 #  Ogni passo, se si ferma, si riprende rilanciando lo script; se lo script
 #  cambia un passo, quel passo si rifa' da solo.

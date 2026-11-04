@@ -259,6 +259,34 @@ exit 3
     uguale "errore" "$(cat "$RADICE/mnt/vetro/.esito" 2>/dev/null)" "la macchina dice al PC che non e' riuscito"
 }
 
+test_guida() {
+    local g="$ARCH_DIR/GUIDA-INSTALLAZIONE.md"
+    contiene "$g" "sudo bash lfs.sh fase10"
+    contiene "$g" "sudo bash lfs.sh avvia"
+    contiene "$g" "sudo bash lfs.sh registri"
+    contiene "$g" "sudo bash lfs.sh installa"
+    non_contiene "$g" "vetro-arch.sh"
+    non_contiene "$g" "vetro-vm.sh"
+}
+
+test_file_unico_avvia_prova() {
+    # il file unico vero: "avvia --prova" scrive il comando di QEMU
+    local t; t=$(mktemp -d)
+    bash "$ARCH_DIR/costruisci.sh" "$ARCH_DIR/file" "$t/lfs.sh" >/dev/null
+    mkdir -p "$t/bin" "$t/pc/vetro-arch/condivisa"
+    printf '#!/bin/bash\ncase "$*" in "-device help") echo "name \\"virtio-9p-pci\\"" ;; esac\n' > "$t/bin/qemu-system-x86_64"
+    chmod +x "$t/bin/qemu-system-x86_64"
+    VETRO_PC="$t/pc/vetro-arch" PATH="$t/bin:$PATH" bash "$t/lfs.sh" avvia --prova > "$t/uscita" 2>&1
+    uguale 0 "$?" "lfs.sh avvia --prova esce bene"
+    contiene "$t/uscita" "usb-tablet"
+    contiene "$t/uscita" "mount_tag=vetro"
+    bash "$t/lfs.sh" > "$t/aiuto" 2>&1
+    contiene "$t/aiuto" "sudo bash lfs.sh fase10"
+    rm -rf "$t"
+}
+
+prova test_guida
+prova test_file_unico_avvia_prova
 prova test_parametri_iso
 prova test_impronta_password
 prova test_installa_conf

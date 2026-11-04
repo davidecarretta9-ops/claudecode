@@ -1,5 +1,5 @@
 #!/bin/bash
-# Strumenti per le prove di vetro-arch.sh: radice finta, comandi finti, confronti.
+# Strumenti per le prove di lfs.sh (Vetro su Arch): radice finta, comandi finti, confronti.
 # Ogni prova gira in una sottoshell (prova NOME); i risultati vanno in un file.
 QUI_TEST=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ARCH_DIR=$(dirname "$QUI_TEST")

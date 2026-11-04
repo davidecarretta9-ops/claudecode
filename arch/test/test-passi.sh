@@ -53,12 +53,12 @@ test_non_root_non_arch() {
 test_file_unico() {
     local t; t=$(mktemp -d)
     mkdir -p "$t/file/etc"; echo "ciao vetro" > "$t/file/etc/prova.txt"
-    bash "$ARCH_DIR/costruisci.sh" "$t/file" "$t/vetro-arch.sh" >/dev/null
-    bash -n "$t/vetro-arch.sh"
+    bash "$ARCH_DIR/costruisci.sh" "$t/file" "$t/lfs.sh" >/dev/null
+    bash -n "$t/lfs.sh"
     uguale "0" "$?" "il file unico non ha errori di sintassi"
-    local aiuto; aiuto=$(VETRO_PROVA=1 bash "$t/vetro-arch.sh" aiuto 2>&1)
+    local aiuto; aiuto=$(VETRO_PROVA=1 bash "$t/lfs.sh" aiuto 2>&1)
     case "$aiuto" in *controlla*registri*) ok_prova "aiuto elenca i comandi" ;; *) fallita "aiuto elenca i comandi: $aiuto" ;; esac
-    bash "$t/vetro-arch.sh" _estrai "$t/estratti" >/dev/null 2>&1
+    bash "$t/lfs.sh" _estrai "$t/estratti" >/dev/null 2>&1
     cmp -s "$t/file/etc/prova.txt" "$t/estratti/etc/prova.txt"
     uguale "0" "$?" "il file estratto dall'archivio e' uguale all'originale"
     rm -rf "$t"
