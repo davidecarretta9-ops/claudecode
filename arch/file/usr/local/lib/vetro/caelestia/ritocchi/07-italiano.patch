@@ -1,0 +1,11 @@
+diff --git a/plugin/src/Caelestia/I18n/CMakeLists.txt b/plugin/src/Caelestia/I18n/CMakeLists.txt
+index 8b205ab..62f8c73 100644
+--- a/plugin/src/Caelestia/I18n/CMakeLists.txt
++++ b/plugin/src/Caelestia/I18n/CMakeLists.txt
+@@ -1,5 +1,6 @@
+ set(po_files
+     # All .po files should go here
++    trs/it.po
+ )
+ 
+ set(trs_script "${CMAKE_SOURCE_DIR}/scripts/trs.fish")
