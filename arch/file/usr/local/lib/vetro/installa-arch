@@ -1,0 +1,101 @@
+#!/bin/bash
+# L'installazione di Arch nella macchina virtuale di Vetro (creato da vetro-arch.sh).
+# La esegue da sola la ISO di Arch (parametro script=) quando "sudo bash lfs.sh fase10"
+# accende la macchina la prima volta. Le scelte (utente e impronte delle password) le
+# prende dal PC: http://10.0.2.2:8765/installa.conf. Scrive tutto anche sulla seriale,
+# cosi' si legge nel terminale del PC. Alla fine (riuscita o no) spegne la macchina.
+set -Eeuo pipefail
+
+SERVER=${SERVER:-http://10.0.2.2:8765}
+DISCO=${DISCO:-/dev/vda}
+REGISTRO=/tmp/installa-arch.log
+
+exec > >(tee -a "$REGISTRO" /dev/ttyS0) 2>&1
+
+fallito() {
+    trap - ERR
+    echo
+    echo "=== INSTALLAZIONE NON RIUSCITA (riga $1) ==="
+    echo "Il registro e' anche sul PC: ~/vetro-arch/condivisa/installa-arch.log"
+    curl -fsS -T "$REGISTRO" "$SERVER/installa-arch.log" >/dev/null 2>&1 || true
+    sleep 3
+    poweroff
+}
+trap 'fallito $LINENO' ERR
+
+passo() { printf '\n==> %s\n' "$*"; }
+
+passo "Leggo le scelte dal PC"
+curl -fsS --retry 5 "$SERVER/installa.conf" -o /tmp/installa.conf
+# shellcheck disable=SC1091
+. /tmp/installa.conf                       # UTENTE, IMPRONTA, IMPRONTA_FANTASMA
+[[ "$UTENTE" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || { echo "Nome utente non valido: $UTENTE"; false; }
+[[ "$IMPRONTA" == '$6$'* && "$IMPRONTA_FANTASMA" == '$6$'* ]] || { echo "Impronte delle password non valide"; false; }
+
+passo "Aspetto le chiavi di pacman"
+for _ in $(seq 1 120); do
+    systemctl is-active --quiet pacman-init.service && break
+    sleep 1
+done
+# un mirror sicuro in cima alla lista (quello del mese della ISO a volte e' lento)
+sed -i '1i Server = https://geo.mirror.pkgbuild.com/$repo/os/$arch' /etc/pacman.d/mirrorlist
+
+passo "Preparo il disco $DISCO (tutto quello che c'era si cancella)"
+umount -R /mnt 2>/dev/null || true
+wipefs -af "$DISCO"
+printf 'label: dos\ntype=83, bootable\n' | sfdisk -q "$DISCO"
+udevadm settle
+mkfs.ext4 -F -q -O encrypt -L vetro "${DISCO}1"
+mount "${DISCO}1" /mnt
+
+passo "Scarico e installo Arch (qualche minuto)"
+pacstrap -K /mnt base linux linux-firmware e2fsprogs grub sudo
+genfstab -U /mnt >> /mnt/etc/fstab
+# la cartella condivisa con il PC (se QEMU ce l'ha)
+mkdir -p /mnt/mnt/vetro
+echo 'vetro /mnt/vetro 9p trans=virtio,version=9p2000.L,nofail,x-systemd.automount 0 0' >> /mnt/etc/fstab
+printf '9p\n9pnet_virtio\n' > /mnt/etc/modules-load.d/vetro-9p.conf
+
+passo "Prendo lfs.sh dal PC"
+curl -fsS --retry 5 "$SERVER/lfs.sh" -o /mnt/usr/local/sbin/lfs.sh
+chmod 755 /mnt/usr/local/sbin/lfs.sh
+rm -rf /tmp/vetro-file
+bash /mnt/usr/local/sbin/lfs.sh _estrai /tmp/vetro-file
+install -Dm644 /tmp/vetro-file/etc/systemd/network/10-cavo.network /mnt/etc/systemd/network/10-cavo.network
+install -Dm755 /tmp/vetro-file/usr/local/sbin/vetro-comando /mnt/usr/local/sbin/vetro-comando
+install -Dm644 /tmp/vetro-file/etc/systemd/system/vetro-comando.service /mnt/etc/systemd/system/vetro-comando.service
+
+passo "Configuro il sistema"
+mkdir -p /mnt/etc/vetro
+echo "$UTENTE" > /mnt/etc/vetro/utente
+printf '%s\n' "$IMPRONTA_FANTASMA" > /mnt/etc/vetro/fantasma.hash
+chmod 600 /mnt/etc/vetro/fantasma.hash
+arch-chroot /mnt env UTENTE="$UTENTE" IMPRONTA="$IMPRONTA" DISCO="$DISCO" /bin/bash -s <<'DENTRO'
+set -Eeuo pipefail
+ln -sf /usr/share/zoneinfo/Europe/Rome /etc/localtime
+hwclock --systohc || true
+sed -i 's/^#\(it_IT.UTF-8 UTF-8\)/\1/; s/^#\(en_US.UTF-8 UTF-8\)/\1/' /etc/locale.gen
+locale-gen
+echo LANG=it_IT.UTF-8 > /etc/locale.conf
+echo KEYMAP=it > /etc/vconsole.conf
+echo vetro > /etc/hostname
+useradd -m -G wheel -s /bin/bash "$UTENTE"
+usermod -p "$IMPRONTA" "$UTENTE"
+passwd -l root
+# l'avanzamento si vede anche sulla seriale (il terminale del PC)
+sed -i -e 's|^GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 console=tty0 console=ttyS0,115200"|' \
+       -e 's|^GRUB_TIMEOUT=.*|GRUB_TIMEOUT=1|' /etc/default/grub
+grub-install --target=i386-pc "$DISCO"
+grub-mkconfig -o /boot/grub/grub.cfg
+systemctl enable systemd-networkd.service systemd-resolved.service systemd-networkd-wait-online.service vetro-comando.service
+DENTRO
+ln -sf /run/systemd/resolve/stub-resolv.conf /mnt/etc/resolv.conf
+date '+%F %T' > /mnt/etc/vetro/arch-installato
+
+passo "Arch installato: lo dico al PC e spengo"
+date '+%F %T' > /tmp/arch-ok
+curl -fsS -T /tmp/arch-ok "$SERVER/.arch-ok"
+curl -fsS -T "$REGISTRO" "$SERVER/installa-arch.log" >/dev/null 2>&1 || true
+sync
+umount -R /mnt
+poweroff

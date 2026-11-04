@@ -1,0 +1,50 @@
+#!/bin/bash
+# I comandi del PC per la macchina virtuale di Vetro (creato da vetro-arch.sh). Lo lancia
+# il servizio vetro-comando a ogni accensione. Se il PC ha lasciato un comando
+# ("sudo bash lfs.sh fase10 | registri | controlla"), lo esegue con il lfs.sh nuovo e
+# poi spegne la macchina; se no non fa niente (accensione normale).
+# Il comando arriva dalla cartella condivisa (/mnt/vetro/.comando) oppure, se QEMU non
+# ha la cartella condivisa, dal piccolo server del PC (http://10.0.2.2:8765).
+R=${VETRO_RADICE:-}
+CONDIVISA="$R/mnt/vetro"
+SERVER=${VETRO_SERVER:-http://10.0.2.2:8765}
+LFS="$R/usr/local/sbin/lfs.sh"
+
+comando=""
+da_server=0
+if [ -f "$CONDIVISA/.comando" ]; then
+    comando=$(head -n 1 "$CONDIVISA/.comando")
+    rm -f "$CONDIVISA/.comando"
+    if [ -f "$CONDIVISA/lfs.sh" ]; then
+        mkdir -p "$(dirname "$LFS")"
+        cp -f "$CONDIVISA/lfs.sh" "$LFS"
+        chmod 755 "$LFS"
+    fi
+elif comando=$(curl -fsS --max-time 5 "$SERVER/.comando" 2>/dev/null) && [ -n "$comando" ]; then
+    da_server=1
+    comando=$(printf '%s\n' "$comando" | head -n 1)
+    mkdir -p "$(dirname "$LFS")"
+    if curl -fsS --max-time 900 "$SERVER/lfs.sh" -o "$LFS.nuovo"; then
+        mv -f "$LFS.nuovo" "$LFS"
+        chmod 755 "$LFS"
+    fi
+else
+    exit 0
+fi
+
+case "$comando" in
+    installa|registri|controlla) ;;
+    *) echo "vetro-comando: comando sconosciuto, non lo eseguo: $comando"; exit 0 ;;
+esac
+
+echo
+echo "=== Vetro: $comando (dal PC) ==="
+if ! bash "$LFS" "$comando"; then
+    echo "=== Vetro: $comando NON riuscito (rilancia lo stesso comando sul PC) ==="
+fi
+# senza cartella condivisa i registri tornano al PC dal server
+if [ "$comando" = registri ] && [ "$da_server" = 1 ] && [ -f "$R/root/registri-vetro.txt" ]; then
+    curl -fsS -T "$R/root/registri-vetro.txt" "$SERVER/registri-vetro.txt" || true
+fi
+echo "=== Vetro: fatto, spengo la macchina ==="
+systemctl poweroff
