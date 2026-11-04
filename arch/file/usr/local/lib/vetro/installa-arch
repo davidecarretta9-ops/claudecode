@@ -90,7 +90,7 @@ sed -i 's/^#\(it_IT.UTF-8 UTF-8\)/\1/; s/^#\(en_US.UTF-8 UTF-8\)/\1/' /etc/local
 locale-gen
 echo LANG=it_IT.UTF-8 > /etc/locale.conf
 echo KEYMAP=it > /etc/vconsole.conf
-echo vetro > /etc/hostname
+echo oversica > /etc/hostname
 useradd -m -G wheel -s /bin/bash "$UTENTE"
 usermod -p "$IMPRONTA" "$UTENTE"
 passwd -l root
@@ -98,7 +98,8 @@ passwd -l root
 systemctl mask serial-getty@ttyS0.service
 # l'avanzamento si vede anche sulla seriale (il terminale del PC)
 sed -i -e 's|^GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 console=tty0 console=ttyS0,115200"|' \
-       -e 's|^GRUB_TIMEOUT=.*|GRUB_TIMEOUT=1|' /etc/default/grub
+       -e 's|^GRUB_TIMEOUT=.*|GRUB_TIMEOUT=1|' \
+       -e 's|^GRUB_DISTRIBUTOR=.*|GRUB_DISTRIBUTOR="oversicaOS"|' /etc/default/grub
 grub-install --target=i386-pc "$DISCO"
 grub-mkconfig -o /boot/grub/grub.cfg
 systemctl enable systemd-networkd.service systemd-resolved.service systemd-networkd-wait-online.service vetro-comando.service
