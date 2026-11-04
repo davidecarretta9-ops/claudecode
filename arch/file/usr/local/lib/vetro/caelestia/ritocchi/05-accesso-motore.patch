@@ -1,0 +1,42 @@
+diff --git a/modules/lock/LockSurface.qml b/modules/lock/LockSurface.qml
+index 782cb71..e6ba39b 100644
+--- a/modules/lock/LockSurface.qml
++++ b/modules/lock/LockSurface.qml
+@@ -13,7 +13,8 @@ WlSessionLockSurface {
+     id: root
+ 
+     required property WlSessionLock lock
+-    required property Pam pam
++    // oversicaOS: Pam o AccessoGreetd (stessa forma)
++    required property var pam
+ 
+     readonly property alias unlocking: unlockAnim.running
+ 
+diff --git a/modules/lock/center/InputField.qml b/modules/lock/center/InputField.qml
+index ce27e99..ac055a7 100644
+--- a/modules/lock/center/InputField.qml
++++ b/modules/lock/center/InputField.qml
+@@ -13,7 +13,8 @@ Item {
+     id: root
+ 
+     required property real centerScale
+-    required property Pam pam
++    // oversicaOS: Pam o AccessoGreetd (stessa forma)
++    required property var pam
+     readonly property alias placeholder: placeholder
+     readonly property alias placeholderWidth: nonAnimPlaceholder.width
+     property string buffer
+diff --git a/modules/lock/center/StateMessage.qml b/modules/lock/center/StateMessage.qml
+index 6be3b40..94beb83 100644
+--- a/modules/lock/center/StateMessage.qml
++++ b/modules/lock/center/StateMessage.qml
+@@ -10,7 +10,8 @@ import qs.modules.lock
+ Item {
+     id: root
+ 
+-    required property Pam pam
++    // oversicaOS: Pam o AccessoGreetd (stessa forma)
++    required property var pam
+ 
+     readonly property string msg: {
+         // Errors

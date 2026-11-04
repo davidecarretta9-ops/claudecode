@@ -341,6 +341,7 @@ class ProvaAccesso(unittest.TestCase):
         self.assertEqual(h.config.get("input.kb_layout"), "it")
         self.assertTrue(h.config.get("misc.disable_watchdog_warning"))
         self.assertEqual(h.env.get("XCURSOR_THEME"), "Vetro")
+        self.assertEqual(h.env.get("XDG_CONFIG_HOME"), "/etc/vetro/accesso")
         self.assertIn({"output": "Virtual-1", "mode": "1920x1080", "position": "auto", "scale": "1"}, h.monitor)
 
     def test_avvia_la_schermata_e_poi_esce(self):
@@ -348,7 +349,7 @@ class ProvaAccesso(unittest.TestCase):
         self.assertEqual(h.avviati, [], "niente programmi prima dell'avvio")
         h.avvia()
         self.assertEqual(len(h.avviati), 1)
-        self.assertTrue(h.avviati[0].startswith("qs -p /etc/xdg/quickshell/vetro/accesso.qml; "))
+        self.assertIn("qs -p /etc/xdg/quickshell/caelestia/accesso.qml; ", h.avviati[0])
         self.assertEqual(h.comando_shell(h.avviati[0]), ["hl.dsp.exit()"])
         self.assertEqual(h.errori, [])
 

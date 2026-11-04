@@ -1,0 +1,43 @@
+diff --git a/modules/lock/center/ProfilePic.qml b/modules/lock/center/ProfilePic.qml
+index a9fb624..2f0b0e2 100644
+--- a/modules/lock/center/ProfilePic.qml
++++ b/modules/lock/center/ProfilePic.qml
+@@ -1,6 +1,7 @@
+ pragma ComponentBehavior: Bound
+ 
+ import QtQuick
++import Quickshell
+ import M3Shapes
+ import Caelestia
+ import Caelestia.Config
+@@ -40,7 +41,7 @@ Item {
+         text: "person"
+         color: Colours.palette.m3onSurfaceVariant
+         fontStyle: Tokens.font.icon.size(root.centerWidth / 4).build()
+-        visible: !pfp.ready
++        visible: !pfp.ready && !pubblica.ready
+     }
+ 
+     Visual {
+@@ -48,6 +49,21 @@ Item {
+ 
+         anchors.fill: shape
+         source: `${Paths.home}/.face`
++        visible: !pubblica.ready
++
++        layer.enabled: true
++        layer.effect: Mask {
++            maskSource: shape
++        }
++    }
++
++    // oversicaOS: l'avatar scelto in Impostazioni > Account, che vede anche la schermata
++    // di accesso (lei non puo' leggere la tua cartella); se non c'e' resta ~/.face
++    Visual {
++        id: pubblica
++
++        anchors.fill: shape
++        source: `/var/lib/AccountsService/icons/${Quickshell.env("USER")}`
+ 
+         layer.enabled: true
+         layer.effect: Mask {

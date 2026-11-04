@@ -15,9 +15,9 @@ tipo_di() {   # bash | python | altro (dalla prima riga)
 }
 
 test_quanti_qml() {
-    local n; n=$(find "$F/etc/xdg/quickshell/vetro" -name '*.qml' | wc -l)
-    # i pannelli sono di Caelestia: di Vetro resta la schermata di accesso (3 file)
-    if [ "$n" -ge 3 ]; then ok_prova "$n file QML"; else fallita "solo $n file QML (almeno 3)"; fi
+    local n; n=$(find "$F/usr/local/lib/vetro/caelestia/nuovi" -name '*.qml' | wc -l)
+    # i pannelli sono di Caelestia: di oversicaOS ci sono i pezzi nuovi (logo, accesso...)
+    if [ "$n" -ge 5 ]; then ok_prova "$n file QML"; else fallita "solo $n file QML (almeno 5)"; fi
 }
 
 test_sintassi_script() {
@@ -35,11 +35,11 @@ test_sintassi_script() {
 test_qml_lint() {
     if [ ! -x "$QMLLINT" ]; then fallita "manca pyside6-qmllint (vedi in cima a questo file)"; return; fi
     local f errori=0
-    for f in "$F"/etc/xdg/quickshell/vetro/*.qml; do
+    while IFS= read -r f; do
         if "$QMLLINT" "$f" 2>&1 | grep -q '\[syntax\]'; then
             fallita "errore di sintassi QML in $(basename "$f")"; errori=1
         fi
-    done
+    done < <(find "$F" -name '*.qml')
     [ "$errori" -eq 1 ] || ok_prova "nessun errore di sintassi QML"
 }
 

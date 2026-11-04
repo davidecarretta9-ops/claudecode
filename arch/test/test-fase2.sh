@@ -120,7 +120,7 @@ test_f2_desktop() {
     finto fc-cache; curl_carattere
     FONT_ICONE_SHA256=$(printf carattere | sha256sum | cut -d' ' -f1)
     f2_desktop >/dev/null
-    esiste "$RADICE/etc/xdg/quickshell/vetro/accesso.qml"
+    esiste "$RADICE/usr/local/lib/vetro/caelestia/nuovi/accesso.qml"
     esiste "$RADICE/etc/xdg/hypr/vetro.lua"
     esiste "$RADICE/etc/xdg/hypr/vetro-barre.lua"
     esiste "$RADICE/etc/pacman.d/hooks/vetro-barre.hook"
@@ -140,9 +140,11 @@ test_pannelli_vecchi_tolti() {
     mkdir -p "$RADICE/etc/xdg/quickshell/vetro"
     echo vecchio > "$RADICE/etc/xdg/quickshell/vetro/Barra.qml"
     echo vecchio > "$RADICE/etc/xdg/quickshell/vetro/Hypr.js"
+    echo vecchio > "$RADICE/etc/xdg/quickshell/vetro/accesso.qml"
     f2_desktop >/dev/null
     non_esiste "$RADICE/etc/xdg/quickshell/vetro/Barra.qml"
     non_esiste "$RADICE/etc/xdg/quickshell/vetro/Hypr.js"
+    # la vecchia schermata di accesso resta finche' il passo "accesso" non mette la nuova
     esiste "$RADICE/etc/xdg/quickshell/vetro/accesso.qml"
     non_esiste "$F/etc/xdg/quickshell/vetro/Pannello.qml"
     contiene "$F/usr/local/bin/blocca-schermo" "qs -c caelestia ipc call lock lock"
@@ -152,7 +154,7 @@ test_pannelli_vecchi_tolti() {
 test_qml() {
     if [ ! -x "$QMLLINT" ]; then fallita "manca pyside6-qmllint"; return; fi
     local f e=0
-    for f in "$F"/etc/xdg/quickshell/vetro/*.qml; do
+    for f in $(find "$F/usr/local/lib/vetro/caelestia/nuovi" -name '*.qml'); do
         if "$QMLLINT" "$f" 2>&1 | grep -q '\[syntax\]'; then fallita "QML: $(basename "$f")"; e=1; fi
     done
     [ "$e" -eq 1 ] || ok_prova "QML senza errori di sintassi"

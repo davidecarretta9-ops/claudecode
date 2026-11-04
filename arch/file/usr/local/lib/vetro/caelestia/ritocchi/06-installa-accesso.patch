@@ -1,0 +1,13 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 05d3531..3b794b5 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -78,6 +78,8 @@ if("shell" IN_LIST ENABLE_MODULES)
+     string(REPLACE "settings.watchFiles: true" "settings.watchFiles: false" SHELL_QML "${SHELL_QML}")
+     file(WRITE "${CMAKE_BINARY_DIR}/qml/shell.qml" "${SHELL_QML}")
+     install(FILES "${CMAKE_BINARY_DIR}/qml/shell.qml" DESTINATION "${INSTALL_QSCONFDIR}")
++    # oversicaOS: la schermata di accesso (greetd) fatta coi pezzi del blocco
++    install(FILES accesso.qml DESTINATION "${INSTALL_QSCONFDIR}")
+ 
+     install(FILES LICENSE DESTINATION "${INSTALL_QSCONFDIR}")
+ endif()

@@ -2,7 +2,7 @@
 PKG_FASE2=(hyprland quickshell greetd xdg-desktop-portal-hyprland pipewire wireplumber
            pipewire-pulse adwaita-fonts adwaita-icon-theme gnome-themes-extra grim slurp
            swayidle swaylock libnotify jq git cmake ninja meson cpio base-devel)
-FILE_DESKTOP="etc/xdg/quickshell/vetro etc/xdg/hypr usr/local/lib/vetro etc/gtk-3.0 etc/gtk-4.0
+FILE_DESKTOP="etc/xdg/hypr usr/local/lib/vetro etc/gtk-3.0 etc/gtk-4.0
               usr/local/bin/avvia-desktop usr/local/bin/avvio-vetro usr/local/bin/avvia-pannelli
               usr/local/bin/blocca-schermo usr/local/bin/sfondo-desktop usr/local/bin/schermata
               usr/local/bin/oversica-config
@@ -70,13 +70,18 @@ f2_desktop() {
     ok "Desktop di oversicaOS (Caelestia)"
 }
 
-# --- la schermata di accesso: greetd apre accesso.qml in un Hyprland tutto suo ----------
-FASE2+=("accesso|f2_accesso|etc/greetd/config.toml etc/vetro/accesso-hyprland.lua")
+# --- la schermata di accesso: greetd apre il blocco di Caelestia (accesso.qml) in un
+# Hyprland tutto suo; la password la controlla greetd (AccessoGreetd.qml) ----------------
+FASE2+=("accesso|f2_accesso|etc/greetd/config.toml etc/vetro/accesso-hyprland.lua etc/vetro/accesso")
 
 f2_accesso() {
     installa_pacchetti greetd
     installa_file etc/greetd/config.toml etc/vetro/accesso-hyprland.lua
+    # le scelte di Caelestia per la schermata di accesso (italiano, sfondo dietro il blocco)
+    installa_cartella etc/vetro/accesso
     rm -f "$(percorso /etc/vetro/accesso-hyprland.conf)"
+    # la vecchia schermata di Vetro: ora e' il blocco di Caelestia (accesso.qml di Caelestia)
+    rm -rf "$(percorso /etc/xdg/quickshell/vetro)"
     # l'utente "greeter" (lo crea il pacchetto greetd) deve poter usare la scheda video
     esegui usermod -aG video greeter
     esegui systemctl enable greetd.service
