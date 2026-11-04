@@ -1,0 +1,9 @@
+Ritocchi di oversicaOS a Caelestia (creato da lfs.sh).
+Caelestia (https://github.com/caelestia-dots/shell, licenza GPL-3) si scarica a un
+commit fisso; prima di compilarlo lfs.sh:
+  1. copia sopra i sorgenti tutto quello che c'e' in nuovi/ (stessi percorsi);
+  2. applica in ordine i file ritocchi/NN-nome.patch (patch -p1).
+Se un ritocco non si applica, l'installazione si ferma.
+Come si fa un ritocco: in un clone di Caelestia allo stesso commit, modifica,
+"git diff > ritocchi/NN-nome.patch", e copia i file originali toccati in
+arch/test/caelestia-originali/ (servono alle prove).

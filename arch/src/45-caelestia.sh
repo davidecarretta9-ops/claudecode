@@ -46,6 +46,21 @@ scarica_controllato() {
     fi
 }
 
+# applica_ritocchi SORGENTE: i ritocchi di oversicaOS (vedi usr/local/lib/vetro/caelestia/LEGGIMI)
+applica_ritocchi() {
+    local s=$1 r=${CAELESTIA_RITOCCHI:-$VETRO_FILE/usr/local/lib/vetro/caelestia} p
+    if [ -d "$r/nuovi" ]; then
+        cp -a "$r/nuovi/." "$s/" || muori "Non riesco a copiare i file di oversicaOS su Caelestia"
+    fi
+    for p in "$r"/ritocchi/*.patch; do
+        [ -f "$p" ] || continue
+        if ! patch -d "$s" -p1 --forward --batch --fuzz=0 --no-backup-if-mismatch -r - < "$p" >/dev/null; then
+            muori "Un ritocco di oversicaOS non si applica a Caelestia (${p##*/}): lfs.sh va aggiornato (mandami questo messaggio)"
+        fi
+    done
+    info "Ritocchi di oversicaOS applicati"
+}
+
 # I pacchetti ufficiali che servono a Caelestia (compilarlo e usarlo)
 PKG_CAELESTIA=(git gettext cmake ninja pkgconf qt6-base qt6-declarative qt6-imageformats
                qt6-multimedia qt6-shadertools qt6-svg qt6-wayland pipewire libqalculate aubio
