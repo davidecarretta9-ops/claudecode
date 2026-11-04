@@ -383,6 +383,8 @@ class ProvaDesktop(unittest.TestCase):
         self.assertEqual(h.config["decoration.rounding"], 18)
         self.assertEqual(h.config["general.border_size"], 0)
         self.assertEqual(h.config["input.kb_layout"], "it")
+        # Hyprland 0.57 scrive i nomi con "_" al posto di "-" (tap-to-click -> tap_to_click)
+        self.assertIs(h.config.get("input.touchpad.tap_to_click"), True)
         self.assertEqual(h.env["XCURSOR_THEME"], "Vetro")
         self.assertTrue(h.config["misc.disable_watchdog_warning"])
         self.assertEqual(h.notifiche, [])

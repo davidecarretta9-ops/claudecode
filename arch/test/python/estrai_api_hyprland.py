@@ -57,8 +57,9 @@ def main(hypr, plugin):
     except OSError:
         api["versione"] = "?"
 
+    # come CConfigManager::luaConfigValueName: ":" diventa "." e "-" diventa "_"
     valori = leggi(hypr / "src/config/values/ConfigValues.cpp")
-    api["config"] = sorted({k.replace(":", ".") for k in re.findall(
+    api["config"] = sorted({k.replace(":", ".").replace("-", "_") for k in re.findall(
         r"\"([a-z_]+(?::[a-zA-Z_.0-9-]+)+)\"", valori)})
 
     disp = leggi(lb / "LuaBindingsDispatchers.cpp")
@@ -106,7 +107,7 @@ def main(hypr, plugin):
 
     barre = subprocess.run(["git", "-C", str(plugin), "show", "origin/main:hyprbars/main.cpp"],
                            capture_output=True, text=True).stdout or leggi(plugin / "hyprbars/main.cpp")
-    api["hyprbars_config"] = sorted({k.replace(":", ".") for k in re.findall(
+    api["hyprbars_config"] = sorted({k.replace(":", ".").replace("-", "_") for k in re.findall(
         r"\"(plugin:hyprbars:[a-z_.]+)\"", barre)})
     api["hyprbars_funzioni"] = sorted(set(re.findall(
         r"addLuaFunction\(PHANDLE, \"hyprbars\", \"([a-z_]+)\"", barre)))
