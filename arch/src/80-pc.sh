@@ -212,10 +212,10 @@ pc_qemu() {
             local iso
             iso=$(ls -1 "$c"/archlinux-*-x86_64.iso 2>/dev/null | sort | tail -n 1 || true)
             COMANDO+=(-kernel "$c/avvio/vmlinuz-linux" -initrd "$c/avvio/initramfs-linux.img"
-                      -append "$(cat "$c/avvio/parametri" 2>/dev/null) script=http://10.0.2.2:$PC_PORTA/installa-arch console=tty0 console=ttyS0,115200"
-                      -cdrom "$iso" -display none -serial stdio -no-reboot) ;;
+                      -append "$(cat "$c/avvio/parametri" 2>/dev/null) script=http://10.0.2.2:$PC_PORTA/installa-arch console=tty0 console=ttyS0,115200 systemd.mask=serial-getty@ttyS0.service"
+                      -cdrom "$iso" -display none -serial file:/dev/stdout -no-reboot) ;;
         comando)
-            COMANDO+=(-display none -serial stdio -no-reboot) ;;
+            COMANDO+=(-display none -serial file:/dev/stdout -no-reboot) ;;
         avvia)
             # schermo: due uscite (per provare piu' schermi), con il 3D del PC se c'e'
             if grep -q '"virtio-vga-gl"' <<<"$aiuto_dev" && [ "${GL:-si}" != no ]; then
@@ -269,6 +269,7 @@ pc_fase10() {
         rm -f "$c/condivisa/installa-arch.log"
         pc_server_avvia
         info "La macchina parte senza schermo: qui sotto i suoi messaggi (ci vuole un po')."
+        info "Non scrivere niente: fa tutto da sola (le domande di pacman hanno gia' la risposta)."
         pc_accendi installa
         [ -f "$c/condivisa/.arch-ok" ] \
             || muori "L'installazione di Arch non e' riuscita (il motivo e' in $c/condivisa/installa-arch.log). Rilancia:  sudo bash lfs.sh fase10"
@@ -276,6 +277,7 @@ pc_fase10() {
     fi
     rm -f "$c/condivisa/installa.conf"
     titolo "2/2 - Installo (o aggiorno) Vetro nella macchina"
+    info "Non scrivere niente: fa tutto da sola. Se compare \"login:\", ignoralo."
     pc_copia_lfs
     rm -f "$c/condivisa/.esito"
     echo installa > "$c/condivisa/.comando"

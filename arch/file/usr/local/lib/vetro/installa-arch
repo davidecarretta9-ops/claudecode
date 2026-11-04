@@ -46,9 +46,9 @@ wipefs -af "$DISCO"
 printf 'label: dos\ntype=83, bootable\n' | sfdisk -q "$DISCO"
 udevadm settle
 mkfs.ext4 -F -q -O encrypt -L vetro "${DISCO}1"
-mount "${DISCO}1" /mnt
+mount -t ext4 "${DISCO}1" /mnt
 
-passo "Scarico e installo Arch (qualche minuto)"
+passo "Scarico e installo Arch (qualche minuto: le domande di pacman qui sotto si rispondono da sole)"
 pacstrap -K /mnt base linux linux-firmware e2fsprogs grub sudo
 genfstab -U /mnt >> /mnt/etc/fstab
 # la cartella condivisa con il PC (se QEMU ce l'ha)
@@ -82,6 +82,8 @@ echo vetro > /etc/hostname
 useradd -m -G wheel -s /bin/bash "$UTENTE"
 usermod -p "$IMPRONTA" "$UTENTE"
 passwd -l root
+# niente "login:" sulla seriale: la seriale serve solo a mostrare i messaggi sul PC
+systemctl mask serial-getty@ttyS0.service
 # l'avanzamento si vede anche sulla seriale (il terminale del PC)
 sed -i -e 's|^GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 console=tty0 console=ttyS0,115200"|' \
        -e 's|^GRUB_TIMEOUT=.*|GRUB_TIMEOUT=1|' /etc/default/grub

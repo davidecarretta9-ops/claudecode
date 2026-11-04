@@ -31,6 +31,9 @@ test_installa_arch() {
     contiene "$INSTALLA" "mkfs.ext4 -F -q -O encrypt"
     contiene "$INSTALLA" "chmod 600"
     contiene "$INSTALLA" "INSTALLAZIONE NON RIUSCITA"
+    # niente "login:" sulla seriale (confonde nel terminale del PC) e niente prove ext2/ext3
+    contiene "$INSTALLA" "systemctl mask serial-getty@ttyS0.service"
+    contiene "$INSTALLA" "mount -t ext4"
     contiene "$INSTALLA" "systemctl enable systemd-networkd.service systemd-resolved.service"
     contiene "$INSTALLA" "vetro-comando.service"
     contiene "$INSTALLA" ".arch-ok"
@@ -167,7 +170,8 @@ test_qemu_installa() {
     case "$c" in *"-kernel $VETRO_PC/avvio/vmlinuz-linux"*) ok_prova "kernel dalla ISO" ;; *) fallita "kernel: $c" ;; esac
     case "$c" in *"script=http://10.0.2.2:8765/installa-arch"*"console=ttyS0"*) ok_prova "script= e seriale" ;; *) fallita "append: $c" ;; esac
     case "$c" in *"archisosearchuuid=2026-11-01-10-00-00-00"*) ok_prova "parametri della ISO" ;; *) fallita "parametri: $c" ;; esac
-    case "$c" in *"-display none"*"-serial stdio"*) ok_prova "senza schermo, seriale nel terminale" ;; *) fallita "schermo: $c" ;; esac
+    case "$c" in *"-display none"*"-serial file:/dev/stdout"*) ok_prova "senza schermo, seriale solo in uscita nel terminale" ;; *) fallita "schermo: $c" ;; esac
+    case "$c" in *"systemd.mask=serial-getty@ttyS0.service"*) ok_prova "niente login sulla seriale" ;; *) fallita "login seriale: $c" ;; esac
     case "$c" in *"-cdrom $VETRO_PC/archlinux-2026.11.01-x86_64.iso"*) ok_prova "ISO" ;; *) fallita "cdrom: $c" ;; esac
 }
 
@@ -175,7 +179,7 @@ test_qemu_comando() {
     pc_finto; : > "$VETRO_PC/disco.qcow2"
     pc_qemu comando
     local c; c=$(unisci "${COMANDO[@]}")
-    case "$c" in *"-display none"*"-serial stdio"*) ok_prova "comando senza schermo" ;; *) fallita "schermo: $c" ;; esac
+    case "$c" in *"-display none"*"-serial file:/dev/stdout"*) ok_prova "comando senza schermo, seriale solo in uscita" ;; *) fallita "schermo: $c" ;; esac
     case "$c" in *"mount_tag=vetro"*) ok_prova "cartella condivisa" ;; *) fallita "9p: $c" ;; esac
     case "$c" in *"-kernel"*|*"-cdrom"*) fallita "comando non deve partire dalla ISO" ;; *) ok_prova "parte dal disco" ;; esac
 }
