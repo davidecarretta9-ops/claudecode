@@ -143,6 +143,8 @@ hl.bind("CTRL + ALT + T", hl.dsp.exec_cmd("foot"))
 hl.bind(W .. " + E", hl.dsp.exec_cmd("thunar"))
 hl.bind(W .. " + B", hl.dsp.exec_cmd("/usr/local/bin/browser-predefinito"))
 hl.bind("CTRL + SHIFT + ESCAPE", hl.dsp.exec_cmd("xfce4-taskmanager"))
+-- emergenza: se i pannelli si bloccano li chiude (avvia-pannelli li riapre subito)
+hl.bind("CTRL + ALT + BACKSPACE", hl.dsp.exec_cmd("pkill -KILL -x quickshell"))
 hl.bind("PRINT", hl.dsp.exec_cmd("/usr/local/bin/schermata"))
 hl.bind("SHIFT + PRINT", hl.dsp.exec_cmd("/usr/local/bin/schermata area"))
 

@@ -45,6 +45,9 @@ Aggiorna Vetro dentro la macchina, rifacendo solo le parti cambiate. Poi di nuov
 
 ## Se qualcosa non va
 
+Se la barra e i pannelli si bloccano, si riaprono da soli entro circa 20 secondi.
+Per farlo subito premi **Ctrl+Alt+Backspace** (chiude i pannelli, che ripartono).
+
 ```bash
 sudo bash lfs.sh registri
 ```

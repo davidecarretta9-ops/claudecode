@@ -1,18 +1,52 @@
 #!/bin/bash
-# La grafica del desktop Vetro (creato da vetro-arch.sh): Quickshell con i pannelli
-# in /etc/xdg/quickshell/vetro. Se si chiude per un errore riparte; se continua a
-# non partire avvisa e riprova ogni 30 secondi.
-# Il motivo e' in ~/.cache/quickshell-vetro.log
+# La grafica del desktop Vetro (creato da lfs.sh): Quickshell con i pannelli in
+# /etc/xdg/quickshell/vetro. Se si chiude per un errore riparte; se si blocca (non
+# risponde per circa 15 secondi) lo chiude e riparte; se continua a non partire avvisa
+# e riprova ogni 30 secondi. Il motivo e' in ~/.cache/quickshell-vetro.log
 export PATH="/usr/local/bin:$PATH"
 export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
 export QT_QPA_PLATFORM=wayland
 PANNELLI=/etc/xdg/quickshell/vetro
 registro="$HOME/.cache/quickshell-vetro.log"
+OGNI=${VETRO_OGNI:-5}       # secondi tra un controllo e l'altro (le prove lo accorciano)
 mkdir -p "$HOME/.cache"
 
-# i pannelli sono caricati? (rispondono solo se tutti i file si sono caricati bene)
+# i pannelli sono caricati? (rispondono solo se tutti i file si sono caricati bene;
+# se Quickshell e' bloccato la domanda resta senza risposta: dopo 4 secondi e' un no)
 risponde() {
-    [ "$(qs -p "$PANNELLI" ipc call vetro ping 2>/dev/null)" = ok ]
+    [ "$(timeout 4 qs -p "$PANNELLI" ipc call vetro ping 2>/dev/null)" = ok ]
+}
+
+# Quickshell bloccato: si scrive nel registro cosa stava facendo, poi si chiude
+bloccati() {
+    local pid=$1 f
+    {
+        echo "--- $(date '+%F %T') i pannelli non rispondono: li chiudo e li riapro"
+        grep '^State' "/proc/$pid/status" 2>/dev/null
+        for f in /proc/"$pid"/task/*; do
+            [ -d "$f" ] || continue
+            echo "  filo ${f##*/} $(cat "$f/comm" 2>/dev/null): $(cat "$f/wchan" 2>/dev/null) $(cut -d' ' -f1 "$f/syscall" 2>/dev/null)"
+        done
+        if timeout 3 hyprctl version >/dev/null 2>&1; then echo "  Hyprland risponde"
+        else echo "  Hyprland NON risponde"; fi
+    } >> "$registro" 2>&1
+    kill -KILL "$pid" 2>/dev/null
+}
+
+# aspetta che Quickshell si chiuda; se smette di rispondere 3 volte di fila lo chiude
+sorveglia() {
+    local pid=$1 mancati=0
+    while kill -0 "$pid" 2>/dev/null; do
+        sleep "$OGNI"
+        kill -0 "$pid" 2>/dev/null || break
+        if risponde; then mancati=0; else mancati=$(( mancati + 1 )); fi
+        if [ "$mancati" -ge 3 ]; then
+            bloccati "$pid"
+            ( sleep 10; notify-send "Desktop Vetro" "I pannelli si erano bloccati: li ho riaperti" ) >/dev/null 2>&1 &
+            break
+        fi
+    done
+    wait "$pid" 2>/dev/null
 }
 
 errori_rapidi=0
@@ -28,7 +62,7 @@ while :; do
         if risponde; then caricati=1; break; fi
     done
     if [ "$caricati" = 1 ]; then
-        wait "$pid"
+        sorveglia "$pid"
         esito=$?
     else
         echo "--- $(date '+%F %T') i pannelli non rispondono" >> "$registro"

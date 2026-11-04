@@ -408,6 +408,7 @@ class ProvaDesktop(unittest.TestCase):
             "SUPER + SHIFT + 5": "window.move workspace=5",
             "SUPER + CTRL + RIGHT": "focus workspace=e+1",
             "XF86AudioPlay": "global quickshell:musica-play",
+            "CTRL + ALT + BACKSPACE": "exec_cmd pkill -KILL -x quickshell",
         }
         for tasti, atteso in attesi.items():
             b = h.bind(tasti)
