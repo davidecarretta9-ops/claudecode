@@ -54,7 +54,7 @@ test_avvia_desktop_css() {
 
 test_fc_cache_dopo_caratteri() {
     # il carattere delle icone c'e' gia' (niente download): la cache va rifatta lo stesso
-    radice_finta; finto pacman; finto systemctl; finto python3; finto vetro-barre-aggiorna; finto fc-cache
+    radice_finta; finto pacman; finto systemctl; finto python3; finto vetro-barre-aggiorna; finto fc-cache; compilazione_finta_base
     mkdir -p "$RADICE/usr/share/fonts/material-symbols"
     printf carattere > "$RADICE/usr/share/fonts/material-symbols/MaterialSymbolsRounded.ttf"
     FONT_ICONE_SHA256=$(printf carattere | sha256sum | cut -d' ' -f1)
@@ -97,7 +97,7 @@ test_sfondo_di_partenza() {
 }
 
 test_f2_senza_disegna_vetro() {
-    radice_finta; finto pacman; finto systemctl; finto python3; finto vetro-barre-aggiorna; finto fc-cache
+    radice_finta; finto pacman; finto systemctl; finto python3; finto vetro-barre-aggiorna; finto fc-cache; compilazione_finta_base
     mkdir -p "$RADICE/usr/share/fonts/material-symbols"
     printf carattere > "$RADICE/usr/share/fonts/material-symbols/MaterialSymbolsRounded.ttf"
     FONT_ICONE_SHA256=$(printf carattere | sha256sum | cut -d' ' -f1)

@@ -122,7 +122,7 @@ test_font_icone_sbagliato() {
 }
 
 test_f2_desktop() {
-    radice_finta; finto pacman; finto systemctl; finto python3; finto vetro-barre-aggiorna
+    radice_finta; finto pacman; finto systemctl; finto python3; finto vetro-barre-aggiorna; compilazione_finta_base
     finto fc-cache; curl_carattere
     FONT_ICONE_SHA256=$(printf carattere | sha256sum | cut -d' ' -f1)
     f2_desktop >/dev/null

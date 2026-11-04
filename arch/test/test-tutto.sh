@@ -38,6 +38,7 @@ FINE
 echo "Filesystem features: has_journal extent"
 FINE
     FONT_ICONE_SHA256=$(printf carattere | sha256sum | cut -d' ' -f1)
+    compilazione_finta_base
 }
 
 test_tutto() {

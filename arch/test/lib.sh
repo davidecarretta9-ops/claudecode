@@ -46,6 +46,26 @@ finto_con() {
     chmod +x "$RADICE/.finti/$cmd"
 }
 
+# git finto: ricorda le chiamate; "rev-parse HEAD" risponde $GIT_COMMIT se c'e',
+# se no il commit chiesto con fetch (cioe' il download va bene)
+git_finto() {
+    finto_con git <<'FINE'
+dir=""
+[ "$1" = -C ] && { dir=$2; shift 2; }
+case "$1" in
+    init) mkdir -p "$dir"; touch "$dir/.git-finto" ;;
+    fetch) for a in "$@"; do c=$a; done; echo "$c" > "$dir/.commit" ;;
+    rev-parse) if [ -n "${GIT_COMMIT:-}" ]; then echo "$GIT_COMMIT"; else cat "$dir/.commit"; fi ;;
+esac
+exit 0
+FINE
+}
+
+# compilatori finti (Quickshell e Caelestia si compilano dai sorgenti)
+compilazione_finta_base() {
+    git_finto; finto cmake; finto ninja
+}
+
 ok_prova() { echo "ok      $PROVA_ATTUALE: $*" >> "$ESITI"; }
 fallita()  { echo "FALLITO $PROVA_ATTUALE: $*" >> "$ESITI"; }
 
