@@ -145,5 +145,45 @@ class ProvaAvatar(unittest.TestCase):
         self.assertEqual(QImage(str(d / "a.png")).width(), 64)
 
 
+class ProvaSalva(unittest.TestCase):
+    """oversica-avatar salva: scelte in ~/.config/oversica/avatar.json, immagine in ~/.face,
+    poi la copia pubblica (sudo, per la schermata di accesso)."""
+
+    def setUp(self):
+        self.casa = pathlib.Path(tempfile.mkdtemp())
+        self.bin = self.casa / "bin"
+        self.bin.mkdir()
+        (self.bin / "sudo").write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "$HOME/sudo-args"\nwc -c > "$HOME/sudo-stdin"\n')
+        (self.bin / "sudo").chmod(0o755)
+
+    def salva(self, testo):
+        amb = dict(os.environ, HOME=str(self.casa), XDG_CONFIG_HOME=str(self.casa / ".config"),
+                   PATH=f"{self.bin}:{os.environ['PATH']}", OVERSICA_AVATAR_DATI=str(DATI))
+        return subprocess.run(["python3", "-I", str(SCRIPT), "salva", testo], env=amb,
+                              capture_output=True, text=True)
+
+    def test_salva(self):
+        r = self.salva(json.dumps({"capelli": "ricci", "pelle": 4, "maglia": 99}))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        scelte = json.loads((self.casa / ".config/oversica/avatar.json").read_text())
+        self.assertEqual(scelte, dict(PREDEFINITE, capelli="ricci", pelle=4))
+        self.assertEqual((self.casa / ".face").read_bytes(), disegna(scelte))
+        self.assertEqual((self.casa / "sudo-args").read_text().split(),
+                         ["-n", "/usr/local/sbin/oversica-avatar-pubblica"])
+        self.assertEqual(int((self.casa / "sudo-stdin").read_text()), len((self.casa / ".face").read_bytes()))
+
+    def test_testo_rotto(self):
+        r = self.salva("{rotto")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads((self.casa / ".config/oversica/avatar.json").read_text()), PREDEFINITE)
+
+    def test_senza_sudo_va_lo_stesso(self):
+        (self.bin / "sudo").write_text("#!/bin/sh\nexit 1\n")
+        r = self.salva("{}")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue((self.casa / ".face").exists())
+        self.assertIn("accesso", r.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

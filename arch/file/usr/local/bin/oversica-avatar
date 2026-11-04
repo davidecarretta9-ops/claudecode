@@ -2,6 +2,11 @@
 """oversicaOS: l'avatar a pixel in stile Oversica Lodge (creato da lfs.sh).
 
   oversica-avatar disegna SCELTE.json USCITA.png [--lato 256]
+  oversica-avatar salva '{"capelli": "ricci", ...}'
+
+"salva" (lo usa Impostazioni > Account) scrive le scelte in ~/.config/oversica/avatar.json,
+l'immagine in ~/.face e ne fa una copia pubblica per la schermata di accesso (sudo,
+/usr/local/sbin/oversica-avatar-pubblica).
 
 SCELTE.json: {"capelli": "corti|folti|lunghi|raccolti|ricci|rasati",
               "coloreCapelli": 0-7, "pelle": 0-5, "maglia": 0-7}
@@ -11,6 +16,7 @@ Impostazioni, cosi' l'anteprima e il PNG sono identici)."""
 import json
 import os
 import struct
+import subprocess
 import sys
 import tempfile
 import zlib
@@ -92,14 +98,39 @@ def disegna(file_scelte, uscita, lato=256):
     os.replace(temp, uscita)
 
 
+def salva(testo):
+    try:
+        scelte = normalizza(json.loads(testo))
+    except ValueError:
+        scelte = normalizza({})
+    casa = os.path.expanduser("~")
+    config = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.join(casa, ".config"), "oversica")
+    os.makedirs(config, exist_ok=True)
+    file_scelte = os.path.join(config, "avatar.json")
+    with open(file_scelte + ".nuovo", "w", encoding="utf-8") as f:
+        json.dump(scelte, f, indent=1)
+    os.replace(file_scelte + ".nuovo", file_scelte)
+    face = os.path.join(casa, ".face")
+    disegna(file_scelte, face)
+    # la schermata di accesso non puo' leggere la tua cartella: copia pubblica
+    with open(face, "rb") as f:
+        r = subprocess.run(["sudo", "-n", "/usr/local/sbin/oversica-avatar-pubblica"], stdin=f,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if r.returncode != 0:
+        print("Avatar salvato, ma la schermata di accesso mostrera' quello di prima", file=sys.stderr)
+
+
 def main(argv):
+    if len(argv) == 2 and argv[0] == "salva":
+        salva(argv[1])
+        return 0
     if len(argv) >= 3 and argv[0] == "disegna":
         lato = 256
         if len(argv) >= 5 and argv[3] == "--lato":
             lato = int(argv[4])
         disegna(argv[1], argv[2], lato)
         return 0
-    print(__doc__.strip().splitlines()[2], file=sys.stderr)
+    print("\n".join(__doc__.strip().splitlines()[2:4]), file=sys.stderr)
     return 2
 
 

@@ -1,0 +1,14 @@
+diff --git a/modules/bar/popouts/Wrapper.qml b/modules/bar/popouts/Wrapper.qml
+index 68f85a1..5dca473 100644
+--- a/modules/bar/popouts/Wrapper.qml
++++ b/modules/bar/popouts/Wrapper.qml
+@@ -144,7 +144,8 @@ Item {
+                 anchors.fill: parent
+                 nState.screen: root.screen
+                 nState.animatingContainer: nexus.opacity < 1
+-                nState.currentPageIdx: ["appearance", "network", "bluetooth", "audio"].indexOf(root.queuedMode)
++                // oversicaOS: la pagina si cerca per nome (le pagine nuove spostano i numeri)
++                nState.currentPageIdx: PageRegistry.pages.findIndex(p => p.chiave === root.queuedMode)
+                 onClose: root.close()
+             }
+         }

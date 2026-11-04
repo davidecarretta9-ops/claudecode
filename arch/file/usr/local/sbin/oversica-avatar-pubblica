@@ -1,0 +1,27 @@
+#!/bin/bash
+# oversicaOS (creato da lfs.sh): rende pubblico il tuo avatar, cosi' lo vede anche la
+# schermata di accesso (che non puo' leggere la tua cartella). Si usa cosi':
+#   sudo -n /usr/local/sbin/oversica-avatar-pubblica < ~/.face
+# L'immagine arriva dall'ingresso (niente percorsi: non si puo' far leggere a root un file
+# che non e' tuo) e va in /var/lib/AccountsService/icons/<il tuo utente>, leggibile da tutti.
+# Solo immagini PNG fino a 2 MB.
+set -euo pipefail
+R=${OVERSICA_RADICE:-}
+utente=${SUDO_USER:-}
+if ! [[ "$utente" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+    echo "oversica-avatar-pubblica: si usa con sudo da un utente normale" >&2
+    exit 1
+fi
+t=$(mktemp)
+trap 'rm -f "$t"' EXIT
+head -c 2097153 > "$t"
+if [ "$(stat -c %s "$t")" -gt 2097152 ]; then
+    echo "oversica-avatar-pubblica: immagine troppo grande (massimo 2 MB)" >&2
+    exit 1
+fi
+if [ "$(head -c 8 "$t" | od -An -tx1 | tr -d ' \n')" != "89504e470d0a1a0a" ]; then
+    echo "oversica-avatar-pubblica: non e' un'immagine PNG" >&2
+    exit 1
+fi
+mkdir -p "$R/var/lib/AccountsService/icons"
+install -m 644 "$t" "$R/var/lib/AccountsService/icons/$utente"

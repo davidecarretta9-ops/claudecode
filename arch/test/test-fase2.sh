@@ -116,7 +116,7 @@ test_font_icone_sbagliato() {
 }
 
 test_f2_desktop() {
-    radice_finta; finto pacman; finto systemctl; finto python3; finto vetro-barre-aggiorna; compilazione_finta_base
+    radice_finta; finto pacman; finto systemctl; finto python3; finto vetro-barre-aggiorna; compilazione_finta_base; finto visudo
     finto fc-cache; curl_carattere
     FONT_ICONE_SHA256=$(printf carattere | sha256sum | cut -d' ' -f1)
     f2_desktop >/dev/null
@@ -132,11 +132,15 @@ test_f2_desktop() {
     esiste "$RADICE/usr/local/bin/oversica-config"
     esiste "$RADICE/usr/local/bin/oversica-avatar"
     esiste "$RADICE/usr/share/oversica/avatar/pixel.json"
+    # l'avatar pubblico per la schermata di accesso (Impostazioni > Account)
+    esiste "$RADICE/usr/local/sbin/oversica-avatar-pubblica"
+    esiste "$RADICE/etc/sudoers.d/40-oversica-avatar"
+    chiamato "visudo -cf $RADICE/etc/sudoers.d/40-oversica-avatar"
     esiste "$RADICE/usr/share/fonts/material-symbols/MaterialSymbolsRounded.ttf"
 }
 
 test_pannelli_vecchi_tolti() {
-    radice_finta; finto pacman; finto systemctl; finto python3; finto vetro-barre-aggiorna
+    radice_finta; finto pacman; finto systemctl; finto python3; finto vetro-barre-aggiorna; finto visudo
     finto fc-cache; curl_carattere; compilazione_finta_base
     FONT_ICONE_SHA256=$(printf carattere | sha256sum | cut -d' ' -f1)
     mkdir -p "$RADICE/etc/xdg/quickshell/vetro"

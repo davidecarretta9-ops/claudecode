@@ -1,0 +1,3 @@
+# Creato da lfs.sh (oversicaOS): chi e' nel gruppo wheel rende pubblico il suo avatar
+# (Impostazioni > Account) senza password: solo questo comando, senza argomenti
+%wheel ALL=(root) NOPASSWD: /usr/local/sbin/oversica-avatar-pubblica ""
