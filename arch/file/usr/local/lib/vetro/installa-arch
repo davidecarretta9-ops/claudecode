@@ -49,7 +49,19 @@ mkfs.ext4 -F -q -O encrypt -L vetro "${DISCO}1"
 mount -t ext4 "${DISCO}1" /mnt
 
 passo "Scarico e installo Arch (qualche minuto: le domande di pacman qui sotto si rispondono da sole)"
+# pacman non mostra l'avanzamento se l'uscita non e' un terminale: ogni 20 secondi lo
+# scrive lo script (in un pezzo a parte, senza l'uscita per errore)
+(
+    trap - ERR
+    set +eu +o pipefail
+    while sleep 20; do
+        printf '   ... scaricati %s MB (in tutto circa 700)\n' \
+               "$(du -sm /mnt/var/cache/pacman/pkg 2>/dev/null | cut -f1)"
+    done
+) &
+AVANZAMENTO=$!
 pacstrap -K /mnt base linux linux-firmware e2fsprogs grub sudo
+kill "$AVANZAMENTO" 2>/dev/null || true
 genfstab -U /mnt >> /mnt/etc/fstab
 # la cartella condivisa con il PC (se QEMU ce l'ha)
 mkdir -p /mnt/mnt/vetro

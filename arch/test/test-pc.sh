@@ -34,6 +34,9 @@ test_installa_arch() {
     # niente "login:" sulla seriale (confonde nel terminale del PC) e niente prove ext2/ext3
     contiene "$INSTALLA" "systemctl mask serial-getty@ttyS0.service"
     contiene "$INSTALLA" "mount -t ext4"
+    # pacman non mostra l'avanzamento senza terminale: lo scrive lo script ogni tanto
+    contiene "$INSTALLA" "scaricati"
+    contiene "$INSTALLA" "trap - ERR"
     contiene "$INSTALLA" "systemctl enable systemd-networkd.service systemd-resolved.service"
     contiene "$INSTALLA" "vetro-comando.service"
     contiene "$INSTALLA" ".arch-ok"
@@ -289,6 +292,28 @@ test_file_unico_avvia_prova() {
     rm -rf "$t"
 }
 
+test_kvm_come_utente() {
+    # KVM si controlla come l'utente che fa girare QEMU, non come root
+    pc_finto
+    finto_con test <<'FINE'
+[ "$1" = -w ] && [ "$2" = /dev/kvm ] && exit 0
+exit 1
+FINE
+    pc_qemu comando
+    local c; c=$(unisci "${COMANDO[@]}")
+    case "$c" in *"accel=kvm"*) ok_prova "con KVM" ;; *) fallita "KVM non usato: $c" ;; esac
+    chiamato "test -w /dev/kvm"
+    finto_con test <<'FINE'
+exit 1
+FINE
+    pc_qemu comando
+    c=$(unisci "${COMANDO[@]}")
+    case "$c" in *"accel=tcg"*) ok_prova "senza KVM: tcg" ;; *) fallita "senza KVM: $c" ;; esac
+    pc_avviso_kvm > "$RADICE/uscita" 2>&1
+    contiene "$RADICE/uscita" "KVM"
+}
+
+prova test_kvm_come_utente
 prova test_guida
 prova test_file_unico_avvia_prova
 prova test_parametri_iso

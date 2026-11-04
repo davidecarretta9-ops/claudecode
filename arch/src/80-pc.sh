@@ -198,7 +198,8 @@ pc_qemu() {
     aiuto_dev=$(esegui "$QEMU" -device help 2>/dev/null || true)
     aiuto_audio=$(esegui "$QEMU" -audiodev help 2>/dev/null || true)
     COMANDO=("$QEMU" -name "Vetro su Arch")
-    if [ -w /dev/kvm ]; then COMANDO+=(-machine q35,accel=kvm -cpu host)
+    # KVM (il processore che aiuta la macchina virtuale): si guarda come l'utente di QEMU
+    if pc_come_utente test -w /dev/kvm 2>/dev/null; then COMANDO+=(-machine q35,accel=kvm -cpu host)
     else COMANDO+=(-machine q35,accel=tcg -cpu max); fi
     COMANDO+=(-m "${RAM:-8192}" -smp "$cpu"
               -drive "file=$c/disco.qcow2,format=qcow2,if=virtio"
@@ -245,9 +246,16 @@ mostra_comando() {
     printf '%s\n' "${riga% }"
 }
 
+# senza KVM tutto e' molto piu' lento: si dice perche' e come rimediare
+pc_avviso_kvm() {
+    avviso "Senza KVM la macchina e' molto lenta (anche ore). Attiva la virtualizzazione"
+    avviso "(Intel VT-x / AMD-V) nel BIOS del PC; su Ubuntu: sudo usermod -aG kvm $(pc_utente)"
+}
+
 # pc_accendi MODO: accende la macchina (senza schermo per installa e comando)
 pc_accendi() {
     pc_qemu "$1"
+    case " ${COMANDO[*]} " in *"accel=tcg"*) pc_avviso_kvm ;; esac
     pc_chown
     pc_come_utente "${COMANDO[@]}" || true
 }
