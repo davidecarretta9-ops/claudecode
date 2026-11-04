@@ -25,9 +25,9 @@ f1_leggero() {
     installa_file etc/systemd/zram-generator.conf etc/systemd/oomd.conf.d/vetro.conf \
                   etc/systemd/journald.conf.d/vetro.conf
     esegui systemctl enable systemd-oomd.service
-    # servizi che qui non servono (la rete la fa systemd-networkd, vedi Fase 2)
+    # servizi che qui non servono (la rete: NetworkManager, vedi l'ultimo passo)
     local s
-    for s in NetworkManager.service cups.service; do
+    for s in cups.service; do
         if [ -e "$(percorso "/usr/lib/systemd/system/$s")" ]; then esegui systemctl disable --now "$s"; fi
     done
     if [ -e "$(percorso /usr/lib/systemd/system/bluetooth.service)" ] \

@@ -21,7 +21,8 @@ FASE4=("dns|f4_dns|etc/systemd/resolved.conf.d/10-vetro-dns.conf"
        "vpn|f4_vpn|$(echo $FILE_VPN)"
        "cassaforte|f4_cassaforte|$(echo $FILE_CASSAFORTE)"
        "fantasma|f4_fantasma|$(echo $FILE_SICUREZZA)"
-       "utente-fantasma|f4_utente_fantasma|$(echo $FILE_UTENTE_FANTASMA)")
+       "utente-fantasma|f4_utente_fantasma|$(echo $FILE_UTENTE_FANTASMA)"
+       "rete|f4_rete|etc/NetworkManager/conf.d/10-oversica.conf")
 
 # installa solo i pacchetti che mancano: "pacman -T" guarda anche chi li fornisce (es.
 # iptables-nft al posto di iptables, che pacman --noconfirm non sostituirebbe)
@@ -152,4 +153,15 @@ password_fantasma() {
         avviso "Password non cambiata, riprova ($volta di 3)"
     done
     avviso "Password del fantasma non impostata: la metti dopo con  sudo passwd fantasma"
+}
+
+# --- la rete: NetworkManager (lo usa Caelestia). Ultimo passo e solo dal riavvio dopo:
+# adesso la rete (systemd-networkd) resta com'e', cosi' l'installazione non si interrompe
+f4_rete() {
+    installa_pacchetti networkmanager
+    installa_file etc/NetworkManager/conf.d/10-oversica.conf
+    esegui systemctl enable NetworkManager.service NetworkManager-wait-online.service
+    esegui systemctl disable systemd-networkd.service systemd-networkd-wait-online.service iwd.service \
+        || avviso "Non riesco a spegnere la rete vecchia: controlla dopo il riavvio"
+    ok "Rete con NetworkManager (dal prossimo avvio)"
 }

@@ -79,22 +79,20 @@ f2_accesso() {
     ok "Schermata di accesso (greetd)"
 }
 
-# --- la rete: systemd-networkd (indirizzi), systemd-resolved (nomi), iwd (Wi-Fi) --------
-PKG_FASE2+=(iwd)
-FASE2+=("rete|f2_rete|etc/systemd/network/10-cavo.network etc/systemd/network/10-wifi.network etc/iwd/main.conf usr/local/bin/vetro-wifi")
 
-f2_rete() {
-    installa_pacchetti iwd
-    installa_file etc/systemd/network/10-cavo.network etc/systemd/network/10-wifi.network \
-                  etc/iwd/main.conf usr/local/bin/vetro-wifi
-    esegui systemctl enable systemd-networkd.service systemd-resolved.service iwd.service
-    # i nomi (DNS) passano da systemd-resolved: lo si accende subito, se no lo script
-    # resterebbe senza DNS per il resto dell'installazione
+# --- i nomi dei siti (DNS): li chiede systemd-resolved (Quad9 cifrato, o Tor in modalita'
+# fantasma). La rete vera e propria (NetworkManager) arriva all'ultimo passo.
+FASE2+=("nomi|f2_nomi|")
+
+f2_nomi() {
+    esegui systemctl enable systemd-resolved.service
+    # lo si accende subito, se no lo script resterebbe senza DNS per il resto
+    # dell'installazione
     if esegui systemctl start systemd-resolved.service; then
         mkdir -p "$(percorso /etc)"
         ln -sfn /run/systemd/resolve/stub-resolv.conf "$(percorso /etc/resolv.conf)"
     else
         avviso "systemd-resolved non parte: lascio /etc/resolv.conf com'e'"
     fi
-    ok "Rete via cavo e Wi-Fi (iwd)"
+    ok "Nomi dei siti con systemd-resolved"
 }

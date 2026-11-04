@@ -19,7 +19,8 @@ test_servizi() {
     touch "$RADICE/usr/lib/systemd/system/NetworkManager.service"
     f1_leggero >/dev/null
     chiamato "systemctl enable systemd-oomd.service"
-    chiamato "systemctl disable --now NetworkManager.service"
+    # NetworkManager serve (lo usa Caelestia): non si spegne
+    non_chiamato "systemctl disable --now NetworkManager.service"
     non_chiamato "systemctl disable --now cups.service"
 }
 

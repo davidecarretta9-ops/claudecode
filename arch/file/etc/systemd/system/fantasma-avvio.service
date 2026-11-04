@@ -2,7 +2,7 @@
 Description=Modalita' fantasma: nome del computer e identificativo nascosti (vetro-arch.sh)
 DefaultDependencies=no
 After=local-fs.target
-Before=network-pre.target systemd-networkd.service dbus.service sysinit.target
+Before=network-pre.target systemd-networkd.service NetworkManager.service dbus.service sysinit.target
 Wants=network-pre.target
 
 [Service]

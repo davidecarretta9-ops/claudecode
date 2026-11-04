@@ -84,7 +84,7 @@ ram_usata_mb() {
         "$(percorso /proc/meminfo)" 2>/dev/null
 }
 
-SERVIZI_VETRO="greetd systemd-networkd iwd firewall guardiano-rete systemd-oomd"
+SERVIZI_VETRO="greetd NetworkManager firewall guardiano-rete systemd-oomd"
 
 cmd_controlla() {
     local ram s m

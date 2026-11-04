@@ -21,12 +21,12 @@ test_ram() {
 test_servizi() {
     radice_finta; meminfo 7400000
     finto_con systemctl <<'FINE'
-[ "$3" = iwd.service ] && exit 3
+[ "$3" = NetworkManager.service ] && exit 3
 exit 0
 FINE
     cmd_controlla > "$RADICE/uscita" 2>&1
     contiene "$RADICE/uscita" "[OK] Servizio greetd attivo"
-    contiene "$RADICE/uscita" "[!!] Servizio iwd non attivo"
+    contiene "$RADICE/uscita" "[!!] Servizio NetworkManager non attivo"
     contiene "$RADICE/uscita" "[!!] zram (memoria compressa) non c'e'"
     contiene "$RADICE/uscita" "Modalita' fantasma spenta"
     contiene "$RADICE/uscita" "Passi non fatti"

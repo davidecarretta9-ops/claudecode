@@ -18,7 +18,7 @@ test_dns() {
     else fallita "ordine dei file DNS sbagliato"; fi
     # niente DNS del router: si usa solo quello cifrato
     local n
-    for n in 10-cavo 10-wifi; do
+    for n in 10-cavo; do
         contiene "$F/etc/systemd/network/$n.network" "UseDNS=no"
         contiene "$F/etc/systemd/network/$n.network" "SendHostname=no"
     done
@@ -34,7 +34,7 @@ test_f4_dns() {
 test_ordine_fase4() {
     local nomi="" riga
     for riga in "${FASE4[@]}"; do nomi+="${riga%%|*} "; done
-    uguale "dns vpn cassaforte fantasma utente-fantasma " "$nomi" "ordine dei passi della fase 4"
+    uguale "dns vpn cassaforte fantasma utente-fantasma rete " "$nomi" "ordine dei passi della fase 4 (la rete per ultima)"
 }
 
 test_vpn() {
