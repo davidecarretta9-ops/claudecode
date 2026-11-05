@@ -24,6 +24,10 @@ Scope {
     property string bloccato    // PAM: "The account is locked..." (troppi tentativi)
     property string daDire
     property bool pronto        // password giusta: si parte appena il blocco e' aperto
+    property bool avviato
+    // quanto si aspetta greetd dopo la password, e l'animazione di sblocco (millisecondi)
+    property int attesaGreetd: 15000
+    property int attesaAvvio: 3000
 
     readonly property string lockMessage: bloccato || Accesso.avviso(utenti, scelto)
     property int state
@@ -72,16 +76,42 @@ Scope {
         }
     }
 
+    // ogni passo finisce nel registro della schermata (/var/log/oversica/accesso.log)
+    function registra(testo: string): void {
+        console.info(`oversica accesso: ${testo}`);
+    }
+
     function entra(): void {
-        if (passwd.active || pronto || !utente)
+        if (passwd.active || pronto)
             return;
+        if (!utente) {
+            registra("nessun utente da far entrare (/etc/passwd o /etc/vetro/utente)");
+            return;
+        }
+        if (!Greetd.available) {
+            registra("greetd non c'e' (manca GREETD_SOCK)");
+            fallito(Pam.Error, "greetd non risponde");
+            return;
+        }
         passwd.active = true;
         passwd.message = "";
         daDire = buffer;
+        registra(`entra ${utente}`);
         Greetd.createSession(utente);
+        attesa.restart();
+    }
+
+    // il desktop parte una volta sola
+    function avvia(): void {
+        if (avviato)
+            return;
+        avviato = true;
+        registra("avvio il desktop");
+        Greetd.launch([comando]);
     }
 
     function fallito(stato: int, messaggio: string): void {
+        attesa.stop();
         passwd.active = false;
         passwd.message = messaggio;
         daDire = "";
@@ -94,6 +124,7 @@ Scope {
     function leggiUtenti(): void {
         utenti = Accesso.utenti(passwdFile.text(), tuo);
         scelto = 0;
+        registra(`utenti: ${utenti.join(", ")}`);
     }
 
     FileView {
@@ -114,6 +145,7 @@ Scope {
 
     Connections {
         function onAuthMessage(message: string, error: bool, responseRequired: bool, echoResponse: bool): void {
+            root.registra(`greetd chiede: "${message}" errore=${error} risposta=${responseRequired}`);
             if (responseRequired) {
                 Greetd.respond(root.daDire);
                 root.daDire = "";
@@ -126,16 +158,22 @@ Scope {
         }
 
         function onAuthFailure(message: string): void {
+            root.registra(`password non accettata: ${message}`);
             root.fallito(Pam.Failed, message);
         }
 
         function onReadyToLaunch(): void {
+            root.registra("password giusta: sblocco");
+            attesa.stop();
             root.passwd.active = false;
             root.pronto = true;
             root.lock.unlock();
+            // se l'animazione di sblocco si inceppa, si parte lo stesso
+            avvioDiRiserva.restart();
         }
 
         function onError(error: string): void {
+            root.registra(`errore di greetd: ${error}`);
             Greetd.cancelSession();
             root.fallito(Pam.Error, error);
         }
@@ -147,11 +185,35 @@ Scope {
     // (greetd vuole che la schermata si chiuda subito dopo launch)
     Connections {
         function onLockedChanged(): void {
+            root.registra(`blocco ${root.lock.locked ? "chiuso" : "aperto"}`);
             if (!root.lock.locked && root.pronto)
-                Greetd.launch([root.comando]);
+                root.avvia();
         }
 
         target: root.lock
+    }
+
+    // greetd non risponde alla password: si annulla, cosi' si puo' riprovare
+    Timer {
+        id: attesa
+
+        interval: root.attesaGreetd
+        onTriggered: {
+            root.registra("greetd non risponde: annullo");
+            Greetd.cancelSession();
+            root.fallito(Pam.Error, "greetd non risponde");
+        }
+    }
+
+    Timer {
+        id: avvioDiRiserva
+
+        interval: root.attesaAvvio
+        onTriggered: {
+            root.registra("lo sblocco non e' finito in tempo: avvio lo stesso");
+            root.lock.locked = false;
+            root.avvia();
+        }
     }
 
     Timer {
