@@ -1,0 +1,68 @@
+#!/bin/bash
+# oversicaOS (creato da lfs.sh): avvia la schermata di accesso (il blocco di Caelestia,
+# accesso.qml) dentro l'Hyprland di greetd e ne tiene il registro in /var/log/oversica
+# (lo raccoglie "sudo bash lfs.sh registri").
+# Se la schermata non si carica (Quickshell con un errore nei file non si chiude e
+# resterebbe tutto nero), si apre un accesso di riserva in un terminale: si scrive il
+# nome dell'utente e la password, e parte il desktop lo stesso.
+CARTELLA=${OVERSICA_REGISTRI:-/var/log/oversica}
+log="$CARTELLA/accesso.log"
+if [ -w "$CARTELLA" ]; then
+    # non piu' di 1 MB: oltre si ricomincia
+    [ "$(stat -c %s "$log" 2>/dev/null || echo 0)" -lt 1000000 ] || : > "$log"
+else
+    log=/dev/null
+fi
+echo "--- $(date '+%F %T') schermata di accesso" >> "$log"
+inizio=$(wc -l < "$log" 2>/dev/null || echo 0)
+
+# nel riquadro del sistema e per l'avatar si vede il tuo nome, non "greeter"
+USER=$(head -n 1 /etc/vetro/utente 2>/dev/null || echo greeter)
+export USER
+# l'utente "greeter" ha la casa in / (non scrivibile): stato e cache di Caelestia e di Qt
+# in /run/user (in memoria)
+base="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/oversica"
+export XDG_STATE_HOME="$base/stato" XDG_CACHE_HOME="$base/cache" XDG_DATA_HOME="$base/dati"
+mkdir -p "$XDG_STATE_HOME" "$XDG_CACHE_HOME" "$XDG_DATA_HOME" 2>/dev/null
+qs -p /etc/xdg/quickshell/caelestia/accesso.qml >> "$log" 2>&1 &
+pid=$!
+
+# si aspetta che si carichi (o che dica di no, o che si chiuda)
+leggi() {
+    case "$(tail -n +"$((inizio + 1))" "$log" 2>/dev/null)" in
+        *"Configuration Loaded"*) echo caricata ;;
+        *"Failed to load configuration"*) echo errore ;;
+        *) echo attesa ;;
+    esac
+}
+stato=caricata
+if [ "$log" != /dev/null ]; then
+    while :; do
+        stato=$(leggi)
+        [ "$stato" = attesa ] || break
+        if ! kill -0 "$pid" 2>/dev/null; then
+            # chiusa: si rilegge (puo' aver scritto appena prima di chiudersi)
+            stato=$(leggi)
+            [ "$stato" = attesa ] && stato=chiusa
+            break
+        fi
+        sleep 1
+    done
+fi
+
+if [ "$stato" = caricata ]; then
+    wait "$pid"
+    echo "--- $(date '+%F %T') fine (codice $?)" >> "$log"
+else
+    kill "$pid" 2>/dev/null
+    wait "$pid" 2>/dev/null
+    echo "--- $(date '+%F %T') la schermata non si carica ($stato): accesso di riserva" >> "$log"
+    foot -e agreety --cmd /usr/local/bin/avvia-desktop >> "$log" 2>&1
+fi
+
+# il registro di questo Hyprland (sparirebbe allo spegnimento)
+if [ "$log" != /dev/null ] && [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+    tail -n 300 "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hypr/$HYPRLAND_INSTANCE_SIGNATURE/hyprland.log" \
+        > "$CARTELLA/accesso-hyprland.log" 2>/dev/null
+fi
+hyprctl dispatch 'hl.dsp.exit()'

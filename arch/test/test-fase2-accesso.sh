@@ -22,8 +22,7 @@ test_greetd() {
     contiene "$F/etc/greetd/config.toml" 'user = "greeter"'
     # Hyprland 0.57 legge solo Lua (il controllo completo e' in python/test_lua.py)
     non_esiste "$F/etc/vetro/accesso-hyprland.conf"
-    contiene "$F/etc/vetro/accesso-hyprland.lua" "qs -p /etc/xdg/quickshell/caelestia/accesso.qml"
-    contiene "$F/etc/vetro/accesso-hyprland.lua" "hyprctl dispatch 'hl.dsp.exit()'"
+    contiene "$F/etc/vetro/accesso-hyprland.lua" 'hl.exec_cmd("/usr/local/lib/vetro/accesso-avvia")'
     contiene "$F/etc/vetro/accesso-hyprland.lua" 'hl.env("XCURSOR_THEME", "Vetro")'
     # le scelte di Caelestia per questa schermata (italiano, sfondo sfocato)
     contiene "$F/etc/vetro/accesso-hyprland.lua" 'hl.env("XDG_CONFIG_HOME", "/etc/vetro/accesso")'
@@ -38,9 +37,51 @@ test_scelte_di_caelestia() {
            "italiano e sfondo nel blocco"
 }
 
+# accesso-avvia con comandi finti: QS = cosa fa il qs finto
+avvio_finto() {
+    radice_finta
+    mkdir -p "$RADICE/bin" "$RADICE/log"
+    local c
+    for c in hyprctl foot; do
+        printf '#!/bin/sh\necho "%s $*" >> "%s/.chiamate"\n' "$c" "$RADICE" > "$RADICE/bin/$c"
+    done
+    printf '#!/bin/sh\n%s\n' "$1" > "$RADICE/bin/qs"
+    chmod 755 "$RADICE/bin/"*
+    OVERSICA_REGISTRI="$RADICE/log" PATH="$RADICE/bin:$PATH" timeout 30 bash "$F/usr/local/lib/vetro/accesso-avvia" >/dev/null 2>&1
+}
+
+test_avvio_caricato() {
+    # l'utente "greeter" ha la casa in / (non scrivibile): stato e cache in /run/user
+    avvio_finto 'echo "stato=$XDG_STATE_HOME cache=$XDG_CACHE_HOME"; echo "Configuration Loaded"; exit 0'
+    contiene "$RADICE/log/accesso.log" "stato=/run/user/$(id -u)/oversica/stato cache=/run/user/$(id -u)/oversica/cache"
+    contiene "$RADICE/log/accesso.log" "schermata di accesso"
+    contiene "$RADICE/log/accesso.log" "Configuration Loaded"
+    non_chiamato "foot"
+    chiamato "hyprctl dispatch hl.dsp.exit()"
+}
+
+test_avvio_che_non_si_carica() {
+    # Quickshell con un errore nei file QML non si chiude: resterebbe tutto nero
+    avvio_finto 'echo "Failed to load configuration"; exec sleep 20'
+    contiene "$RADICE/log/accesso.log" "accesso di riserva"
+    chiamato "foot -e agreety --cmd /usr/local/bin/avvia-desktop"
+    chiamato "hyprctl dispatch hl.dsp.exit()"
+    uguale "" "$(pgrep -fx 'sleep 20' 2>/dev/null)" "il qs bloccato e' stato chiuso"
+}
+
+test_avvio_che_si_chiude_subito() {
+    avvio_finto 'echo "errore grave"; exit 1'
+    chiamato "foot -e agreety --cmd /usr/local/bin/avvia-desktop"
+    chiamato "hyprctl dispatch hl.dsp.exit()"
+}
+
 test_f2_accesso() {
-    radice_finta; finto pacman; finto systemctl; finto usermod
+    radice_finta; finto pacman; finto systemctl; finto usermod; finto chown
     f2_accesso >/dev/null
+    esiste "$RADICE/usr/local/lib/vetro/accesso-avvia"
+    esiste "$RADICE/var/log/oversica"
+    chiamato "chown greeter:greeter $RADICE/var/log/oversica"
+    chiamato "pacman -S --needed --noconfirm greetd foot"
     esiste "$RADICE/etc/greetd/config.toml"
     esiste "$RADICE/etc/vetro/accesso-hyprland.lua"
     esiste "$RADICE/etc/vetro/accesso/caelestia/shell.json"
@@ -52,7 +93,7 @@ test_f2_accesso() {
 test_vecchi_file_tolti() {
     # i pannelli di Vetro sono finiti tutti: anche la vecchia schermata di accesso
     non_esiste "$F/etc/xdg/quickshell/vetro"
-    radice_finta; finto pacman; finto systemctl; finto usermod
+    radice_finta; finto pacman; finto systemctl; finto usermod; finto chown
     mkdir -p "$RADICE/etc/xdg/quickshell/vetro"
     : > "$RADICE/etc/xdg/quickshell/vetro/accesso.qml"
     : > "$RADICE/etc/xdg/quickshell/vetro/AccessoVista.qml"
@@ -95,6 +136,9 @@ test_accesso_installato() {
 }
 
 prova test_greetd
+prova test_avvio_caricato
+prova test_avvio_che_non_si_carica
+prova test_avvio_che_si_chiude_subito
 prova test_accesso_installato
 prova test_scelte_di_caelestia
 prova test_f2_accesso

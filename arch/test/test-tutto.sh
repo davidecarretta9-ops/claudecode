@@ -15,7 +15,7 @@ prepara_arch() {
     : > "$RADICE/usr/bin/thunderbird"; : > "$RADICE/usr/bin/winecfg"
     local c
     for c in systemctl python3 usermod useradd groupadd visudo fc-cache gtk-update-icon-cache \
-             vetro-barre-aggiorna tune2fs getent; do
+             vetro-barre-aggiorna tune2fs getent chown; do
         finto "$c"
     done
     finto_con pacman <<'FINE'

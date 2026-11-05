@@ -32,8 +32,8 @@ hl.config({
 -- senza nessun tasto attiverebbe i suoi tasti d'emergenza (Windows+Q apre un terminale)
 hl.bind("SUPER + F12", hl.dsp.no_op())
 
+-- la schermata (con il suo registro e l'accesso di riserva se non si carica); quando
+-- ha finito chiude anche questo Hyprland
 hl.on("hyprland.start", function()
-    -- USER: nel riquadro del sistema e per l'avatar si vede il tuo nome, non "greeter"
-    hl.exec_cmd("USER=$(head -n 1 /etc/vetro/utente 2>/dev/null || echo greeter) "
-                .. "qs -p /etc/xdg/quickshell/caelestia/accesso.qml; hyprctl dispatch 'hl.dsp.exit()'")
+    hl.exec_cmd("/usr/local/lib/vetro/accesso-avvia")
 end)

@@ -78,11 +78,16 @@ f2_desktop() {
 
 # --- la schermata di accesso: greetd apre il blocco di Caelestia (accesso.qml) in un
 # Hyprland tutto suo; la password la controlla greetd (AccessoGreetd.qml) ----------------
-FASE2+=("accesso|f2_accesso|etc/greetd/config.toml etc/vetro/accesso-hyprland.lua etc/vetro/accesso")
+FASE2+=("accesso|f2_accesso|etc/greetd/config.toml etc/vetro/accesso-hyprland.lua etc/vetro/accesso usr/local/lib/vetro/accesso-avvia")
 
 f2_accesso() {
-    installa_pacchetti greetd
-    installa_file etc/greetd/config.toml etc/vetro/accesso-hyprland.lua
+    # foot: il terminale dell'accesso di riserva (se la schermata non si carica)
+    installa_pacchetti greetd foot
+    installa_file etc/greetd/config.toml etc/vetro/accesso-hyprland.lua usr/local/lib/vetro/accesso-avvia
+    # il registro della schermata di accesso (lo scrive l'utente "greeter")
+    mkdir -p "$(percorso /var/log/oversica)"
+    chmod 750 "$(percorso /var/log/oversica)"
+    esegui chown greeter:greeter "$(percorso /var/log/oversica)"
     # le scelte di Caelestia per la schermata di accesso (italiano, sfondo dietro il blocco)
     installa_cartella etc/vetro/accesso
     rm -f "$(percorso /etc/vetro/accesso-hyprland.conf)"

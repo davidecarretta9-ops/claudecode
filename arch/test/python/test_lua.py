@@ -349,8 +349,7 @@ class ProvaAccesso(unittest.TestCase):
         self.assertEqual(h.avviati, [], "niente programmi prima dell'avvio")
         h.avvia()
         self.assertEqual(len(h.avviati), 1)
-        self.assertIn("qs -p /etc/xdg/quickshell/caelestia/accesso.qml; ", h.avviati[0])
-        self.assertEqual(h.comando_shell(h.avviati[0]), ["hl.dsp.exit()"])
+        self.assertEqual(h.avviati[0], "/usr/local/lib/vetro/accesso-avvia")
         self.assertEqual(h.errori, [])
 
     def test_nessun_tasto_apre_un_terminale(self):

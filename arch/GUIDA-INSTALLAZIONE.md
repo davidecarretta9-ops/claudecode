@@ -74,6 +74,11 @@ Aggiorna oversicaOS dentro la macchina, rifacendo solo le parti cambiate. Poi di
 
 ## Se qualcosa non va
 
+Se al posto della schermata di accesso compare una **finestra di testo che chiede il
+nome utente**, è l'accesso di riserva (la schermata non si è caricata): scrivi il tuo
+utente, Invio, poi la password, Invio. Il desktop parte lo stesso. Poi mandami i
+registri (qui sotto).
+
 Se la barra e i pannelli si bloccano, si riaprono da soli entro circa 20 secondi.
 Per farlo subito premi **Ctrl+Alt+Backspace** (chiude i pannelli, che ripartono).
 

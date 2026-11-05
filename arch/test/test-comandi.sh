@@ -50,8 +50,11 @@ test_registri_condivisa() {
     mkdir -p "$VETRO_STATO/fatto"; : > "$VETRO_STATO/fatto/leggero"
     echo "riga di hyprland" > "$RADICE/home/vetro/.cache/hyprland.log"
     echo "riga dei pannelli" > "$RADICE/home/vetro/.cache/quickshell-vetro.log"
+    mkdir -p "$RADICE/var/log/oversica"
+    echo "riga della schermata di accesso" > "$RADICE/var/log/oversica/accesso.log"
+    echo "riga di hyprland dell'accesso" > "$RADICE/var/log/oversica/accesso-hyprland.log"
     finto_con journalctl <<'FINE'
-echo "avviso del sistema"
+case "$*" in *greetd*) echo "riga di greetd" ;; *) echo "avviso del sistema" ;; esac
 FINE
     finto pgrep 1
     cmd_registri >/dev/null 2>&1
@@ -68,6 +71,13 @@ FINE
     contiene "$f" "=== Pannelli (Quickshell)"
     contiene "$f" "riga dei pannelli"
     contiene "$f" "=== Schermi e finestre"
+    # la schermata di accesso (greetd): il suo registro e quello di greetd
+    contiene "$f" "=== Schermata di accesso"
+    contiene "$f" "riga della schermata di accesso"
+    contiene "$f" "riga di hyprland dell'accesso"
+    contiene "$f" "riga di greetd"
+    # la data dei registri del desktop (per capire se sono di oggi o vecchi)
+    contiene "$f" "(file del $(date '+%F') "
     non_esiste "$RADICE/root/registri-vetro.txt"
 }
 

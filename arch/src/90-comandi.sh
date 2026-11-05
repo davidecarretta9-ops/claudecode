@@ -117,6 +117,12 @@ cmd_controlla() {
     else avviso "Passi non fatti: $(echo "$m" | tr '\n' ' ')"; fi
 }
 
+# data_file FILE: quando e' stato scritto (per capire se un registro e' di oggi o vecchio)
+data_file() {
+    [ -f "$1" ] && echo "(file del $(date -r "$1" '+%F %T'))"
+    return 0
+}
+
 # sezione TITOLO: l'intestazione di una parte del file dei registri
 sezione() { printf '\n=== %s\n' "$1"; }
 
@@ -140,13 +146,22 @@ scrivi_registri() {
     # la volta prima (registri della macchina virtuale: si accende apposta per raccoglierli)
     sezione "Registro di sistema, accensione precedente (avvisi)"
     esegui journalctl -b -1 -p warning --no-pager 2>/dev/null | tail -n 300
+    # la schermata di accesso (greetd, come utente "greeter")
+    sezione "Schermata di accesso"
+    tail -n 200 "$(percorso /var/log/oversica/accesso.log)" 2>/dev/null
+    echo "--- Hyprland della schermata di accesso"
+    tail -n 100 "$(percorso /var/log/oversica/accesso-hyprland.log)" 2>/dev/null
+    echo "--- greetd (accensione precedente)"
+    esegui journalctl -b -1 -u greetd --no-pager 2>/dev/null | tail -n 50
     u=$(utente_vetro 2>/dev/null) || u=""
     [ -n "$u" ] || return 0
     casa=$(esegui getent passwd "$u" 2>/dev/null | cut -d: -f6)
     [ -n "$casa" ] || casa="/home/$u"
     sezione "Hyprland"
+    data_file "$(percorso "$casa/.cache/hyprland.log")"
     tail -n 300 "$(percorso "$casa/.cache/hyprland.log")" 2>/dev/null
     sezione "Pannelli (Quickshell)"
+    data_file "$(percorso "$casa/.cache/quickshell-vetro.log")"
     tail -n 300 "$(percorso "$casa/.cache/quickshell-vetro.log")" 2>/dev/null
     sezione "Schermi e finestre"
     if esegui pgrep -u "$u" -x Hyprland >/dev/null 2>&1; then
