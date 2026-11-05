@@ -152,6 +152,24 @@ test_pagine_usano_vetro() {
     contiene "$p/AggiornamentiPage.qml" '"checkupdates"'
 }
 
+test_informazioni() {
+    # Informazioni: oversicaOS col suo logo e il riconoscimento a Caelestia (GPL-3)
+    local r="$F/usr/local/lib/vetro/caelestia/ritocchi/09-informazioni.patch"
+    contiene "$r" "oversicaOS è basato su Caelestia (GPL-3)"
+    contiene "$r" "https://github.com/caelestia-dots/shell"
+    radice_finta
+    local s="$RADICE/sorgente"; mkdir -p "$s"
+    cp -a "$QUI_TEST/caelestia-originali/." "$s/"
+    ( CAELESTIA_RITOCCHI="$F/usr/local/lib/vetro/caelestia" applica_ritocchi "$s" ) >/dev/null 2>&1
+    uguale 0 "$?" "i ritocchi si applicano"
+    contiene "$s/modules/nexus/pages/AboutPage.qml" 'text: "oversicaOS"'
+    contiene "$s/modules/nexus/pages/AboutPage.qml" "Logo {"
+    if [ -x "$QMLLINT" ] && ! "$QMLLINT" "$s/modules/nexus/pages/AboutPage.qml" 2>&1 | grep -q '\[syntax\]'; then
+        ok_prova "AboutPage.qml senza errori di sintassi"
+    else fallita "AboutPage.qml: errori di sintassi"; fi
+}
+
+prova test_informazioni
 prova test_oversica_data_fuso_valido
 prova test_oversica_data_automatica
 prova test_oversica_data_24h

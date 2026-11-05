@@ -1,14 +1,15 @@
 # =============================================================================
-#  lfs.sh — Vetro su Arch Linux: il desktop "Vetro" (leggero, sicurezza:
-#  modalita' fantasma, firewall, Guardiano della rete, VPN...). Un solo file.
+#  lfs.sh — oversicaOS su Arch Linux: l'interfaccia Caelestia con logo, sfondo e
+#  impostazioni di oversicaOS, e la sicurezza di Vetro (modalita' fantasma,
+#  firewall, Guardiano della rete, VPN...). Un solo file.
 #
 #  Sul tuo PC, con una macchina virtuale:
-#    sudo bash lfs.sh fase10      crea la macchina con Arch e Vetro, o aggiorna Vetro
+#    sudo bash lfs.sh fase10      crea la macchina con oversicaOS, o la aggiorna
 #    sudo bash lfs.sh avvia       la accende con lo schermo
 #    sudo bash lfs.sh registri    raccoglie i registri della macchina
 #    sudo bash lfs.sh controlla   dice come sta la macchina
 #  Dentro un Arch gia' installato (anche un PC vero):
-#    sudo bash lfs.sh installa    installa o aggiorna Vetro (riprende da dove era)
+#    sudo bash lfs.sh installa    installa o aggiorna oversicaOS (riprende da dove era)
 #    sudo bash lfs.sh controlla | registri | rifai PASSO
 #
 #  Ogni passo, se si ferma, si riprende rilanciando lo script; se lo script

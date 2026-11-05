@@ -2,17 +2,17 @@
 
 aiuto() {
     cat <<'EOF'
-lfs.sh — Vetro su Arch Linux (il desktop Vetro, leggero, con la modalita' fantasma)
+lfs.sh — oversicaOS su Arch Linux (interfaccia Caelestia, con la modalita' fantasma)
 
 Sul tuo PC (Fedora, Ubuntu...), con una macchina virtuale:
-  sudo bash lfs.sh fase10      crea la macchina con Arch e Vetro (la prima volta),
-                               oppure aggiorna Vetro dentro la macchina
+  sudo bash lfs.sh fase10      crea la macchina con oversicaOS (la prima volta),
+                               oppure aggiorna oversicaOS dentro la macchina
   sudo bash lfs.sh avvia       accende la macchina con lo schermo
   sudo bash lfs.sh registri    raccoglie i registri della macchina in un file
   sudo bash lfs.sh controlla   dice come sta la macchina
 
 Dentro un Arch gia' installato (anche un PC vero):
-  sudo bash lfs.sh installa    installa o aggiorna Vetro su questo computer
+  sudo bash lfs.sh installa    installa o aggiorna oversicaOS su questo computer
   sudo bash lfs.sh controlla   a che punto e' il sistema
   sudo bash lfs.sh registri    raccoglie i registri in un file
   sudo bash lfs.sh rifai PASSO rifa' un passo
@@ -88,7 +88,7 @@ SERVIZI_VETRO="greetd NetworkManager firewall guardiano-rete systemd-oomd"
 
 cmd_controlla() {
     local ram s m
-    titolo "Come sta Vetro"
+    titolo "Come sta oversicaOS"
     ram=$(ram_usata_mb)
     if [ -n "$ram" ]; then
         controllo "$([ "$ram" -lt 700 ] && echo 0 || echo 1)" "RAM usata: $ram MB"

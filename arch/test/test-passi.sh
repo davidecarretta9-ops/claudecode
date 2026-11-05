@@ -59,6 +59,7 @@ test_file_unico() {
     uguale "0" "$?" "il file unico non ha errori di sintassi"
     local aiuto; aiuto=$(VETRO_PROVA=1 bash "$t/lfs.sh" aiuto 2>&1)
     case "$aiuto" in *controlla*registri*) ok_prova "aiuto elenca i comandi" ;; *) fallita "aiuto elenca i comandi: $aiuto" ;; esac
+    case "$aiuto" in *oversicaOS*) ok_prova "aiuto parla di oversicaOS" ;; *) fallita "aiuto senza oversicaOS: $aiuto" ;; esac
     bash "$t/lfs.sh" _estrai "$t/estratti" >/dev/null 2>&1
     cmp -s "$t/file/etc/prova.txt" "$t/estratti/etc/prova.txt"
     uguale "0" "$?" "il file estratto dall'archivio e' uguale all'originale"

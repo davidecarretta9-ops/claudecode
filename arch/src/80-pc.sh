@@ -1,5 +1,5 @@
 # --- Il PC: la macchina virtuale con Vetro su Arch ---------------------------------------
-#   sudo bash lfs.sh fase10     la prima volta installa Arch e poi Vetro; dopo aggiorna Vetro
+#   sudo bash lfs.sh fase10     la prima volta installa Arch e poi oversicaOS; dopo lo aggiorna
 #   sudo bash lfs.sh avvia      la accende con lo schermo
 #   sudo bash lfs.sh registri | controlla   (senza schermo, risultato sul PC)
 # Tutto sta in ~/vetro-arch dell'utente che ha fatto sudo (cartella_pc). QEMU gira come
@@ -197,7 +197,7 @@ pc_qemu() {
     cpu=$(( $(nproc) / 2 )); [ "$cpu" -ge 2 ] || cpu=2
     aiuto_dev=$(esegui "$QEMU" -device help 2>/dev/null || true)
     aiuto_audio=$(esegui "$QEMU" -audiodev help 2>/dev/null || true)
-    COMANDO=("$QEMU" -name "Vetro su Arch")
+    COMANDO=("$QEMU" -name "oversicaOS")
     # KVM (il processore che aiuta la macchina virtuale): si guarda come l'utente di QEMU
     if pc_come_utente test -w /dev/kvm 2>/dev/null; then COMANDO+=(-machine q35,accel=kvm -cpu host)
     else COMANDO+=(-machine q35,accel=tcg -cpu max); fi
@@ -284,7 +284,7 @@ pc_fase10() {
         ok "Arch installato"
     fi
     rm -f "$c/condivisa/installa.conf"
-    titolo "2/2 - Installo (o aggiorno) Vetro nella macchina"
+    titolo "2/2 - Installo (o aggiorno) oversicaOS nella macchina"
     info "Non scrivere niente: fa tutto da sola. Se compare \"login:\", ignoralo."
     pc_copia_lfs
     rm -f "$c/condivisa/.esito"
@@ -295,7 +295,7 @@ pc_fase10() {
     if [ "$(cat "$c/condivisa/.esito" 2>/dev/null)" = ok ]; then
         titolo "Fatto. Ora:  sudo bash lfs.sh avvia"
     else
-        muori "Vetro non si e' installato del tutto: guarda i messaggi qui sopra, poi rilancia  sudo bash lfs.sh fase10  (riprende da dove era)"
+        muori "oversicaOS non si e' installato del tutto: guarda i messaggi qui sopra, poi rilancia  sudo bash lfs.sh fase10  (riprende da dove era)"
     fi
 }
 
