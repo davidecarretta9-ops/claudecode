@@ -81,6 +81,7 @@ test_versioni_fisse() {
     uguale 9b0f339b19057f4731bf3b48293307d7ef241671 "$QUICKSHELL_COMMIT" "Quickshell"
     uguale 32ad9ce328bb77ed349b40a3be10ee9ea610b8ab "$M3SHAPES_COMMIT" "m3shapes"
     uguale 30b8dde034dce180845b0eaf52f72c5b22cd5b60bd7aff96804febae4e266276 "$MATERIALYOU_SHA256" "materialyoucolor"
+    uguale f03278ef9e5e7948fb206453d2f02758f8db216c "$LIBCAVA_COMMIT" "libcava 1.0.0"
 }
 
 test_ordine_compilazione() {
@@ -108,16 +109,58 @@ test_cmake_shell() {
     chiamato "-DCMAKE_INSTALL_PREFIX=/"
 }
 
-test_libcava_dai_pacchetti() {
-    compilazione_finta
+# libcava (le barre della musica) non e' nei pacchetti di Arch: si compila da
+# LukashonakV/cava a versione fissa, prima della shell
+libcava_mancante() {
+    finto_con pkg-config <<'FINE'
+case "$*" in *libcava*) exit 1 ;; esac
+exit 0
+FINE
+    finto_con meson <<'FINE'
+case "$*" in *"${FALLISCE:-niente-da-far-fallire}"*) exit 1 ;; esac
+exit 0
+FINE
+    finto ldconfig
+}
+
+test_libcava_compilata() {
+    compilazione_finta; libcava_mancante
+    ( compila_caelestia ) > "$RADICE/uscita" 2>&1
+    uguale 0 "$?" "compila_caelestia finisce"
+    chiamato "https://github.com/LukashonakV/cava"
+    chiamato "fetch -q --depth 1 origin f03278ef9e5e7948fb206453d2f02758f8db216c"
+    chiamato "meson setup"
+    chiamato "--prefix=/usr -Dbuild_target=lib -Dcava_font=false"
+    chiamato "meson install -C"
+    chiamato "ldconfig"
+    local l s; l=$(riga_di "meson install"); s=$(grep -n "cmake -S .*caelestia-shell" "$RADICE/.chiamate" | head -n1 | cut -d: -f1)
+    if [ -n "$l" ] && [ -n "$s" ] && [ "$l" -lt "$s" ]; then ok_prova "libcava prima della shell"
+    else fallita "libcava ($l) non prima della shell ($s)"; fi
+}
+
+test_libcava_gia_presente() {
+    compilazione_finta; finto meson
     ( compila_caelestia ) >/dev/null 2>&1
     chiamato "pkg-config --exists libcava"
     non_chiamato "LukashonakV"
-    # senza libcava: si ferma e lo dice
-    finto pkg-config 1
-    local msg; msg=$( (compila_caelestia) 2>&1 ); local rc=$?
-    uguale 1 "$rc" "senza libcava si ferma"
-    case "$msg" in *libcava*) ok_prova "dice che manca libcava" ;; *) fallita "messaggio: $msg" ;; esac
+    non_chiamato "meson setup"
+}
+
+test_libcava_che_non_si_compila() {
+    compilazione_finta; libcava_mancante
+    local msg; msg=$( (FALLISCE=build_target compila_caelestia) 2>&1 ); local rc=$?
+    uguale 1 "$rc" "si ferma"
+    case "$msg" in *libcava*) ok_prova "dice che e' libcava" ;; *) fallita "messaggio: $msg" ;; esac
+}
+
+test_pacchetti_libcava() {
+    local p
+    for p in iniparser fftw; do
+        case " ${PKG_CAELESTIA[*]} " in *" $p "*) ok_prova "$p tra i pacchetti" ;; *) fallita "manca $p" ;; esac
+    done
+    case " ${PKG_CAELESTIA[*]} " in *" meson "*) ok_prova "meson tra i pacchetti" ;; *) fallita "manca meson" ;; esac
+    # il programma cava di Arch non serve (Caelestia usa solo la libreria)
+    case " ${PKG_CAELESTIA[*]} " in *" cava "*) fallita "cava di Arch ancora tra i pacchetti" ;; *) ok_prova "niente cava di Arch" ;; esac
 }
 
 test_compilazione_che_fallisce() {
@@ -129,7 +172,10 @@ test_compilazione_che_fallisce() {
 
 prova test_ordine_compilazione
 prova test_cmake_shell
-prova test_libcava_dai_pacchetti
+prova test_libcava_compilata
+prova test_libcava_gia_presente
+prova test_libcava_che_non_si_compila
+prova test_pacchetti_libcava
 prova test_compilazione_che_fallisce
 prova test_scarica_git_giusto
 prova test_scarica_git_commit_diverso

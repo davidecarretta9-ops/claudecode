@@ -412,6 +412,9 @@ M3SHAPES_URL="https://github.com/soramanew/m3shapes"
 M3SHAPES_COMMIT="32ad9ce328bb77ed349b40a3be10ee9ea610b8ab"
 MATERIALYOU_URL="https://files.pythonhosted.org/packages/eb/23/2e63e7bdfcc1aa7ba955386ad09e3bd8a535a1092d7af501659b63cb6282/materialyoucolor-3.0.4.tar.gz"
 MATERIALYOU_SHA256="30b8dde034dce180845b0eaf52f72c5b22cd5b60bd7aff96804febae4e266276"
+# libcava (le barre della musica): non e' nei pacchetti di Arch, si compila (versione 1.0.0)
+LIBCAVA_URL="https://github.com/LukashonakV/cava"
+LIBCAVA_COMMIT="f03278ef9e5e7948fb206453d2f02758f8db216c"
 
 # scarica_git URL COMMIT CARTELLA: i sorgenti di URL esattamente al COMMIT (3 tentativi)
 scarica_git() {
@@ -465,7 +468,7 @@ applica_ritocchi() {
 # I pacchetti ufficiali che servono a Caelestia (compilarlo e usarlo)
 PKG_CAELESTIA=(git gettext cmake ninja pkgconf hyprsunset pacman-contrib qt6-base qt6-declarative qt6-imageformats
                qt6-multimedia qt6-shadertools qt6-svg qt6-wayland pipewire libqalculate aubio
-               cava ddcutil brightnessctl lm_sensors power-profiles-daemon networkmanager
+               iniparser fftw meson ddcutil brightnessctl lm_sensors power-profiles-daemon networkmanager
                fish swappy grim slurp wl-clipboard cliphist fuzzel ffmpeg libnotify glib2
                ttf-cascadia-code-nerd python-build python-installer python-hatchling
                python-hatch-vcs python-setuptools python-wheel pybind11 python-pillow)
@@ -477,9 +480,16 @@ CAELESTIA_CLI_VERSIONE=1.1.3
 compila_caelestia() {
     local t; t=$(mktemp -d)
     installa_pacchetti "${PKG_CAELESTIA[@]}"
-    # le barre della musica: libcava viene dal pacchetto cava di Arch
-    esegui pkg-config --exists libcava || esegui pkg-config --exists cava \
-        || { rm -rf "$t"; muori "Manca libcava (pacchetto cava): lfs.sh va aggiornato (mandami questo messaggio)"; }
+    # le barre della musica: libcava (LukashonakV/cava) si compila, se non c'e' gia'
+    if ! esegui pkg-config --exists libcava; then
+        info "Compilo le barre della musica (libcava)"
+        scarica_git "$LIBCAVA_URL" "$LIBCAVA_COMMIT" "$t/libcava"
+        esegui meson setup "$t/libcava-build" "$t/libcava" --prefix=/usr -Dbuild_target=lib -Dcava_font=false \
+            && esegui meson compile -C "$t/libcava-build" \
+            && esegui meson install -C "$t/libcava-build" \
+            && esegui ldconfig \
+            || { rm -rf "$t"; muori "libcava (le barre della musica di Caelestia) non si compila: guarda i messaggi qui sopra"; }
+    fi
 
     info "Compilo le forme di Caelestia (m3shapes)"
     scarica_git "$M3SHAPES_URL" "$M3SHAPES_COMMIT" "$t/m3shapes"
