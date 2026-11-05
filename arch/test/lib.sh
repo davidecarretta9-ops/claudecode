@@ -108,3 +108,10 @@ riassunto() {
     rm -f "$ESITI" "$ESITI.uscita"
     [ "$f" -eq 0 ]
 }
+
+# curl finto che scrive "carattere" nel file chiesto con -o
+curl_carattere() {
+    finto_con curl <<'FINE'
+while [ $# -gt 0 ]; do [ "$1" = -o ] && { printf carattere > "$2"; shift; }; shift; done
+FINE
+}

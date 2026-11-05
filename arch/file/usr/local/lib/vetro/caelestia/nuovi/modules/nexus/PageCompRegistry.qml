@@ -17,15 +17,16 @@ import qs.modules.nexus.pages.services
 import qs.modules.nexus.pages.wallandstyle
 import qs.modules.nexus.pages.panels.taskbar
 
-// oversicaOS: le pagine delle Impostazioni, prese intere da Caelestia con le pagine di
-// oversicaOS in piu'. Va tenuto allineato a PageRegistry.qml (stessa posizione = stessa pagina).
+// oversicaOS: le pagine delle Impostazioni, prese da Caelestia con le pagine di oversicaOS in
+// piu', nell'ordine di Windows e macOS. Va tenuto allineato a PageRegistry.qml (stessa
+// posizione = stessa pagina).
 QtObject {
     id: root
 
     readonly property list<Component> pageComps: [
-        // oversicaOS
+        // Account
         Component {
-            // Account
+            // Account (oversicaOS)
             StackPage {
                 Component {
                     AccountPage {}
@@ -35,22 +36,8 @@ QtObject {
 
         // Appearance
         Component {
-            // Wallpaper & style
-            StackPage {
-                Component {
                     WallpaperAndStyle {}
-                }
-                Component {
-                    WallpaperSelect {}
-                }
-                Component {
-                    WallpaperCategory {}
-                }
-                Component {
-                    ColourSelect {}
-                }
-            }
-        },
+                },
         Component {
             // Schermo (oversicaOS)
             StackPage {
@@ -62,53 +49,37 @@ QtObject {
 
         // Connectivity
         Component {
-            // Network
-            StackPage {
-                Component {
                     NetworkPage {}
-                }
-                Component {
-                    EthernetDetailPage {}
-                }
-                Component {
-                    AddNetworkPage {}
-                }
-                Component {
-                    NetworkDetailPage {}
-                }
-                Component {
-                    AddVpnPage {}
-                }
-                Component {
-                    AllNetworksPage {}
-                }
-                Component {
-                    SavedNetworksPage {}
-                }
-            }
-        },
+                },
         Component {
-            // Bluetooth
-            StackPage {
-                Component {
                     BluetoothPage {}
-                }
+                },
+        Component {
+                    AudioPage {}
+                },
+
+        // System
+        Component {
+            // Privacy e sicurezza (oversicaOS)
+            StackPage {
                 Component {
-                    BtDeviceInfo {}
-                }
-                Component {
-                    BluetoothPairing {}
+                    PrivacyPage {}
                 }
             }
         },
         Component {
-            // Audio
+            // Energia e blocco (oversicaOS)
             StackPage {
                 Component {
-                    AudioPage {}
+                    EnergiaPage {}
                 }
+            }
+        },
+        Component {
+            // Notifiche (oversicaOS)
+            StackPage {
                 Component {
-                    AppVolumes {}
+                    NotifichePage {}
                 }
             }
         },
@@ -120,8 +91,22 @@ QtObject {
                 }
             }
         },
-
-        // System
+        Component {
+            // Data e ora (oversicaOS)
+            StackPage {
+                Component {
+                    DataOraPage {}
+                }
+            }
+        },
+        Component {
+            // Archiviazione (oversicaOS)
+            StackPage {
+                Component {
+                    ArchiviazionePage {}
+                }
+            }
+        },
         Component {
             // Accessibilita' (oversicaOS)
             StackPage {
@@ -131,95 +116,32 @@ QtObject {
             }
         },
         Component {
-            PlaceholderComp {}
-        },
-        Component {
-            PlaceholderComp {}
+            // Aggiornamenti: in Caelestia era in costruzione (oversicaOS)
+            StackPage {
+                Component {
+                    AggiornamentiPage {}
+                }
+            }
         },
 
         // Shell
         Component {
-            // Panels
-            StackPage {
-                Component {
                     PanelsPage {}
-                }
-                Component {
-                    DashboardPanel {}
-                }
-                Component {
-                    TaskbarPanel {}
-                }
-                Component {
-                    LauncherPanel {}
-                }
-                Component {
-                    SidebarPanel {}
-                }
-                Component {
-                    UtilitiesPanel {}
-                }
-
-                // Taskbar component sub-pages
-                Component {
-                    BarWorkspaces {}
-                }
-                Component {
-                    BarActiveWindow {}
-                }
-                Component {
-                    BarTray {}
-                }
-                Component {
-                    BarStatusIcons {}
-                }
-                Component {
-                    BarClock {}
-                }
-            }
-        },
+                },
         Component {
-            // Apps
-            StackPage {
-                Component {
                     AppsPage {}
-                }
-                Component {
-                    AllApps {}
-                }
-                Component {
-                    AppInfo {}
-                }
-            }
-        },
+                },
         Component {
-            // Services
-            StackPage {
-                Component {
                     ServicesPage {}
-                }
-                Component {
-                    NotificationsPage {}
-                }
-            }
-        },
+                },
         Component {
-            // Language & region
-            StackPage {
-                Component {
                     LanguageAndRegion {}
-                }
-            }
-        },
+                },
 
         // About
         Component {
-            StackPage {
-                Component {
                     AboutPage {}
                 }
-            }
-        }
     ]
 
     readonly property Component placeholderComp: Component {

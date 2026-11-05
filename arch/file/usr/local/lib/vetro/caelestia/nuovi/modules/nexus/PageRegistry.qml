@@ -3,14 +3,15 @@ pragma Singleton
 import QtQuick
 import Caelestia.I18n
 
-// oversicaOS: l'elenco delle pagine delle Impostazioni, preso intero da Caelestia con le
-// pagine di oversicaOS in piu'. Va tenuto allineato a PageCompRegistry.qml (stessa
-// posizione = stessa pagina). "chiave": la barra apre alcune pagine per nome.
+// oversicaOS: l'elenco delle pagine delle Impostazioni, preso da Caelestia con le pagine di
+// oversicaOS in piu' e nell'ordine di Windows e macOS. Va tenuto allineato a
+// PageCompRegistry.qml (stessa posizione = stessa pagina). "chiave": il nome fisso della
+// pagina (la barra apre alcune pagine per nome). Tolta "Plugins" (in costruzione).
 QtObject {
     id: root
 
     readonly property list<var> pages: [
-        // oversicaOS: il tuo account (nome, password, avatar in stile Lodge)
+        // Account
         {
             label: "Account",
             icon: "account_circle",
@@ -22,12 +23,11 @@ QtObject {
         // Appearance
         {
             label: Tr.tr("Wallpaper & style"),
-            chiave: "appearance",
             icon: "palette",
             description: Tr.tr("Wallpaper, fonts, colours"),
-            category: "appearance"
+            category: "appearance",
+            chiave: "appearance"
         },
-        // oversicaOS
         {
             label: "Schermo",
             icon: "monitor",
@@ -37,46 +37,72 @@ QtObject {
         },
 
         // Connectivity
-        // TODO
-        // {
-        //     label: Tr.tr("Display"),
-        //     icon: "monitor",
-        //     description: Tr.tr("Output configuration"),
-        //     category: "connectivity"
-        // },
         {
             label: Tr.tr("Network"),
-            chiave: "network",
             icon: "wifi",
             description: Tr.tr("Wi-Fi, ethernet, VPN"),
-            category: "connectivity"
+            category: "connectivity",
+            chiave: "network"
         },
         {
             label: Tr.tr("Connected devices"),
-            chiave: "bluetooth",
             icon: "devices_other",
             description: Tr.tr("Bluetooth, pairing"),
             category: "connectivity",
-            noFill: true
+            noFill: true,
+            chiave: "bluetooth"
         },
         {
             label: Tr.tr("Audio"),
-            chiave: "audio",
             icon: "volume_up",
             description: Tr.tr("App volumes, sound devices"),
-            category: "connectivity"
+            category: "connectivity",
+            chiave: "audio"
         },
-        // oversicaOS
+
+        // System
+        {
+            label: "Privacy e sicurezza",
+            icon: "shield",
+            description: "Modalita' fantasma, VPN, firewall, cassaforte",
+            category: "system",
+            chiave: "privacy"
+        },
+        {
+            label: "Energia e blocco",
+            icon: "battery_charging_full",
+            description: "Blocco, schermo spento, profilo energetico",
+            category: "system",
+            chiave: "energia"
+        },
+        {
+            label: Tr.tr("Notifications"),
+            icon: "notifications",
+            description: "Non disturbare, come compaiono",
+            category: "system",
+            chiave: "notifiche"
+        },
         {
             label: "Tastiera, mouse e touchpad",
             icon: "keyboard",
             description: "Disposizione dei tasti, velocita', tocco per clic",
-            category: "connectivity",
+            category: "system",
             chiave: "tastiera"
         },
-
-        // System
-        // oversicaOS
+        {
+            label: "Data e ora",
+            icon: "schedule",
+            description: "Fuso orario, ora automatica, formato 24 ore",
+            category: "system",
+            chiave: "dataora"
+        },
+        {
+            label: "Archiviazione",
+            icon: "hard_drive",
+            description: "Spazio sul disco, cestino, file temporanei",
+            category: "system",
+            chiave: "archiviazione"
+        },
         {
             label: "Accessibilita'",
             icon: "accessibility_new",
@@ -88,13 +114,8 @@ QtObject {
             label: Tr.tr("Updates"),
             icon: "update",
             description: Tr.tr("System updates"),
-            category: "system"
-        },
-        {
-            label: Tr.tr("Plugins"),
-            icon: "extension",
-            description: Tr.tr("Manage plugins"),
-            category: "system"
+            category: "system",
+            chiave: "aggiornamenti"
         },
 
         // Shell
@@ -102,25 +123,29 @@ QtObject {
             label: Tr.tr("Panels"),
             icon: "dock_to_bottom",
             description: Tr.tr("Dashboard, taskbar, launcher, sidebar"),
-            category: "shell"
+            category: "shell",
+            chiave: "panels"
         },
         {
             label: Tr.tr("Apps"),
             icon: "apps",
             description: Tr.tr("Default apps, favourites, hidden apps"),
-            category: "shell"
+            category: "shell",
+            chiave: "apps"
         },
         {
             label: Tr.tr("Services"),
             icon: "build",
             description: Tr.tr("Poll intervals, lyrics backend"),
-            category: "shell"
+            category: "shell",
+            chiave: "services"
         },
         {
             label: Tr.tr("Language & region"),
             icon: "globe",
             description: Tr.tr("UI language, weather location, display units"),
-            category: "shell"
+            category: "shell",
+            chiave: "language"
         },
 
         // About
@@ -128,7 +153,8 @@ QtObject {
             label: Tr.tr("About"),
             icon: "info",
             description: Tr.tr("System information, credits"),
-            category: "about"
+            category: "about",
+            chiave: "about"
         },
     ]
 }

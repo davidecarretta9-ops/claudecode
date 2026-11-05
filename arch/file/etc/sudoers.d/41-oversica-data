@@ -1,0 +1,4 @@
+# Creato da lfs.sh (oversicaOS): chi e' nel gruppo wheel cambia fuso orario e ora
+# automatica dalle Impostazioni senza password (solo questo comando, che accetta solo
+# fusi orari esistenti e si/no)
+%wheel ALL=(root) NOPASSWD: /usr/local/sbin/oversica-data

@@ -86,13 +86,6 @@ test_niente_lfs() {
     non_contiene "$F/usr/local/bin/avvio-vetro" "submap"
 }
 
-# curl finto che scrive "carattere" nel file chiesto con -o
-curl_carattere() {
-    finto_con curl <<'FINE'
-while [ $# -gt 0 ]; do [ "$1" = -o ] && { printf carattere > "$2"; shift; }; shift; done
-FINE
-}
-
 test_font_icone() {
     radice_finta; finto fc-cache; curl_carattere
     FONT_ICONE_SHA256=$(printf carattere | sha256sum | cut -d' ' -f1)

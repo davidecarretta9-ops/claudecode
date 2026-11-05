@@ -7,6 +7,7 @@ FILE_DESKTOP="etc/xdg/hypr usr/local/lib/vetro etc/gtk-3.0 etc/gtk-4.0
               usr/local/bin/blocca-schermo usr/local/bin/sfondo-desktop usr/local/bin/schermata
               usr/local/bin/oversica-config usr/local/bin/oversica-avatar usr/share/oversica
               usr/local/sbin/oversica-avatar-pubblica etc/sudoers.d/40-oversica-avatar
+              usr/local/sbin/oversica-data etc/sudoers.d/41-oversica-data
               usr/local/bin/vetro-barre-aggiorna etc/pam.d/vetro-blocco
               etc/pacman.d/hooks/vetro-barre.hook usr/share/icons/default/index.theme
               usr/share/fonts/dm-sans usr/share/icons/hicolor/scalable/apps/vetro.svg etc/xdg/vetro
@@ -57,6 +58,8 @@ f2_desktop() {
     done
     # l'avatar pubblico (Impostazioni > Account): sudo senza password solo per l'aiutante
     esegui visudo -cf "$(percorso /etc/sudoers.d/40-oversica-avatar)"
+    # data e ora dalle Impostazioni (solo fusi orari esistenti e si/no)
+    esegui visudo -cf "$(percorso /etc/sudoers.d/41-oversica-data)"
     # i caratteri nuovi (DM Sans) si vedono subito
     esegui fc-cache -f
     # puntatori (freccia bianca col bordo nero spesso), disegnati con Python; gli sfondi

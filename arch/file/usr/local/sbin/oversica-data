@@ -1,0 +1,31 @@
+#!/bin/bash
+# oversicaOS (creato da lfs.sh): data e ora dalle Impostazioni, senza password (sudo).
+#   sudo -n /usr/local/sbin/oversica-data fuso Europe/Rome     cambia il fuso orario
+#   sudo -n /usr/local/sbin/oversica-data automatica si|no      ora presa da internet
+# Accetta solo fusi orari che esistono in /usr/share/zoneinfo (niente "..", niente
+# caratteri strani) e solo si/no: non fa nient'altro.
+set -euo pipefail
+R=${OVERSICA_RADICE:-}
+
+case "${1:-}" in
+    fuso)
+        zona=${2:-}
+        if ! [[ "$zona" =~ ^[A-Za-z][A-Za-z0-9_+-]*(/[A-Za-z0-9_+-]+)*$ ]] || [[ "$zona" == *..* ]] \
+           || [ ! -f "$R/usr/share/zoneinfo/$zona" ]; then
+            echo "oversica-data: fuso orario sconosciuto: $zona" >&2
+            exit 1
+        fi
+        timedatectl set-timezone "$zona"
+        ;;
+    automatica)
+        case "${2:-}" in
+            si) timedatectl set-ntp true ;;
+            no) timedatectl set-ntp false ;;
+            *) echo "oversica-data: automatica si|no" >&2; exit 1 ;;
+        esac
+        ;;
+    *)
+        echo "oversica-data: fuso ZONA | automatica si|no" >&2
+        exit 1
+        ;;
+esac
