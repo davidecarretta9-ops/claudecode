@@ -50,6 +50,11 @@ avvio_finto() {
     OVERSICA_REGISTRI="$RADICE/log" PATH="$RADICE/bin:$PATH" timeout 30 bash "$F/usr/local/lib/vetro/accesso-avvia" >/dev/null 2>&1
 }
 
+test_registro_salvato_spesso() {
+    # chiudendo la finestra della macchina il registro andrebbe perso: si salva ogni 5 s
+    contiene "$F/usr/local/lib/vetro/accesso-avvia" 'sync "$log"'
+}
+
 test_avvio_caricato() {
     # l'utente "greeter" ha la casa in / (non scrivibile): stato e cache in /run/user
     avvio_finto 'echo "stato=$XDG_STATE_HOME cache=$XDG_CACHE_HOME"; echo "Configuration Loaded"; exit 0'
@@ -136,6 +141,7 @@ test_accesso_installato() {
 }
 
 prova test_greetd
+prova test_registro_salvato_spesso
 prova test_avvio_caricato
 prova test_avvio_che_non_si_carica
 prova test_avvio_che_si_chiude_subito

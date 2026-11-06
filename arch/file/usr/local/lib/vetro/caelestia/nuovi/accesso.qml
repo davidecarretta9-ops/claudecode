@@ -18,15 +18,18 @@ ShellRoot {
         source: Quickshell.shellPath("assets/google-sans-flex/GoogleSansFlex-VariableFont_GRAD,ROND,opsz,slnt,wdth,wght.ttf")
     }
 
+    // si chiama "blocco" e non "lock": dentro LockSurface (creata dal blocco per ogni
+    // schermo) "lock: lock" indicherebbe la sua stessa proprieta' (vuota), la superficie non
+    // sentirebbe "unlock" e dopo la password giusta non partirebbe il desktop
     WlSessionLock {
-        id: lock
+        id: blocco
 
         signal unlock
 
         locked: true
 
         LockSurface {
-            lock: lock
+            lock: blocco
             pam: accesso
         }
     }
@@ -34,6 +37,6 @@ ShellRoot {
     AccessoGreetd {
         id: accesso
 
-        lock: lock
+        lock: blocco
     }
 }

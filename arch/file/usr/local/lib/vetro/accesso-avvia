@@ -26,6 +26,11 @@ export XDG_STATE_HOME="$base/stato" XDG_CACHE_HOME="$base/cache" XDG_DATA_HOME="
 mkdir -p "$XDG_STATE_HOME" "$XDG_CACHE_HOME" "$XDG_DATA_HOME" 2>/dev/null
 qs -p /etc/xdg/quickshell/caelestia/accesso.qml >> "$log" 2>&1 &
 pid=$!
+# il registro si salva su disco ogni 5 secondi: chiudendo la finestra della macchina
+# virtuale (spegnimento brusco) le ultime righe andrebbero perse
+if [ "$log" != /dev/null ]; then
+    ( while kill -0 "$pid" 2>/dev/null; do sleep 5; sync "$log" 2>/dev/null; done ) &
+fi
 
 # si aspetta che si carichi (o che dica di no, o che si chiuda)
 leggi() {
