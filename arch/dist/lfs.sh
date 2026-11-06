@@ -119,7 +119,18 @@ passo() {
     info "$nome..."
     # in sottofondo e non dentro un "if": cosi' "fermati al primo errore" vale davvero
     ( set -Eeuo pipefail; "$fn" ) > "$registro" 2>&1 < /dev/null &
-    wait "$!" || esito=$?
+    local pid=$! battito=${VETRO_BATTITO:-60} secondi=0 ultimo
+    # segno di vita: i passi lunghi (compilazioni) ogni tanto dicono che sono al lavoro e
+    # cosa stanno facendo (l'ultima riga "  ..." del loro registro), se no sembrano bloccati
+    while kill -0 "$pid" 2>/dev/null; do
+        sleep 1
+        secondi=$((secondi + 1))
+        if [ $((secondi % battito)) -eq 0 ] && kill -0 "$pid" 2>/dev/null; then
+            ultimo=$(grep -E '^  [^ ]' "$registro" 2>/dev/null | tail -n 1 | sed 's/^ *//')
+            info "$nome: ancora al lavoro ($((secondi / 60)) min ${ultimo:+- $ultimo}), non chiudere"
+        fi
+    done
+    wait "$pid" || esito=$?
     if [ "$esito" -ne 0 ]; then
         tail -n 15 "$registro" | sed 's/^/      | /' >&2
         muori "Il passo \"$nome\" non e' riuscito (registro: $registro). Rilancia lo script: riparte da qui."
@@ -1025,6 +1036,8 @@ pc_fase10() {
     rm -f "$c/condivisa/installa.conf"
     titolo "2/2 - Installo (o aggiorno) oversicaOS nella macchina"
     info "Non scrivere niente: fa tutto da sola. Se compare \"login:\", ignoralo."
+    info "Non premere Ctrl+C: compilare l'interfaccia puo' durare anche un'ora. Ogni minuto"
+    info "compare \"ancora al lavoro\": vuol dire che sta andando avanti."
     pc_copia_lfs
     rm -f "$c/condivisa/.esito"
     echo installa > "$c/condivisa/.comando"

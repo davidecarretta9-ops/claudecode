@@ -286,6 +286,8 @@ pc_fase10() {
     rm -f "$c/condivisa/installa.conf"
     titolo "2/2 - Installo (o aggiorno) oversicaOS nella macchina"
     info "Non scrivere niente: fa tutto da sola. Se compare \"login:\", ignoralo."
+    info "Non premere Ctrl+C: compilare l'interfaccia puo' durare anche un'ora. Ogni minuto"
+    info "compare \"ancora al lavoro\": vuol dire che sta andando avanti."
     pc_copia_lfs
     rm -f "$c/condivisa/.esito"
     echo installa > "$c/condivisa/.comando"

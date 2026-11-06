@@ -11,6 +11,26 @@ test_passo_una_volta() {
     uguale "1" "$(grep -c x "$RADICE/conta")" "il passo gira una volta sola"
 }
 
+# un passo lungo (compilazioni) scrive ogni tanto che e' ancora al lavoro e cosa fa,
+# se no sembra bloccato (VETRO_BATTITO = ogni quanti secondi, 60 di solito)
+test_segno_di_vita() {
+    radice_finta
+    lento() { info "Compilo Quickshell (ci vuole un po')"; echo "[12/400] cc qualcosa.o"; sleep 3; ok "fatto"; }
+    VETRO_BATTITO=1 passo lungo lento > "$RADICE/uscita" 2>&1
+    uguale 0 "$?" "il passo finisce"
+    contiene "$RADICE/uscita" "lungo: ancora al lavoro"
+    contiene "$RADICE/uscita" "Compilo Quickshell (ci vuole un po')"
+    non_contiene "$RADICE/uscita" "[12/400]"
+    esiste "$VETRO_STATO/fatto/lungo"
+}
+
+test_niente_segno_se_veloce() {
+    radice_finta
+    veloce() { info "subito"; }
+    VETRO_BATTITO=5 passo svelto veloce > "$RADICE/uscita" 2>&1
+    non_contiene "$RADICE/uscita" "ancora al lavoro"
+}
+
 test_impronta_cambiata() {
     radice_finta
     aggiungi_x() { echo x >> "$RADICE/conta"; }
@@ -99,6 +119,8 @@ test_installa_cartella() {
 }
 
 prova test_passo_una_volta
+prova test_segno_di_vita
+prova test_niente_segno_se_veloce
 prova test_impronta_cartella
 prova test_installa_cartella
 prova test_errore_a_meta
